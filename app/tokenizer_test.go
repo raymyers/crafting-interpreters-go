@@ -28,7 +28,7 @@ func TestCases(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			tokens, err := TokenizeString("()")
+			tokens, err := TokenizeString(tc.value)
 			if err != nil {
 				t.Errorf("expected no error, got %v", err)
 			}

@@ -19,7 +19,7 @@ var tokenTypeName = map[TokenType]string{
 	LPAR:  "LEFT_PAREN",
 	RPAR:  "RIGHT_PAREN",
 	LBRAC: "LEFT_BRACE",
-	RBRAC: "RIGHT_RACE",
+	RBRAC: "RIGHT_BRACE",
 }
 
 type Token struct {
