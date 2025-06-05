@@ -19,15 +19,16 @@ func main() {
 	}
 
 	filename := os.Args[2]
-	tokenized, err := TokenizeFile(filename)
+	tokenized, tokenizeErr := TokenizeFile(filename)
+
 	for _, tok := range tokenized {
 		_, err := fmt.Fprintf(os.Stdout, "%s\n", tok.String())
 		if err != nil {
 			os.Exit(1)
 		}
 	}
-	if err != nil {
-		os.Exit(1)
+	if tokenizeErr != nil {
+		os.Exit(65)
 	}
 
 	//fileContents, err := os.ReadFile(filename)

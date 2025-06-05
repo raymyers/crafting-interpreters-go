@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -25,6 +26,7 @@ func TokenizeString(text string) ([]Token, error) {
 
 func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 	result := make([]Token, 0)
+	var errors []string
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
@@ -57,9 +59,17 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{MINUS, "-", ""})
 		case ';':
 			result = append(result, Token{SEMICOLON, ";", ""})
+		default:
+			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: $: %c\n", b)
+			if err != nil {
+				return result, err
+			}
+			errors = append(errors, fmt.Sprintf("unexpected character: %c", b))
 		}
 
 	}
-
+	if len(errors) > 0 {
+		return result, fmt.Errorf("tokenization errors: %s", strings.Join(errors, "; "))
+	}
 	return result, nil
 }
