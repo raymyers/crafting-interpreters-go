@@ -4,18 +4,27 @@ import (
 	"bufio"
 	"io"
 	"os"
+	"strings"
 )
 
-func Tokenize(filename string) ([]Token, error) {
-	result := make([]Token, 0)
-
+func TokenizeFile(filename string) ([]Token, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return result, err
+		return make([]Token, 0), err
 	}
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
+	return TokenizeReader(reader)
+}
+
+func TokenizeString(text string) ([]Token, error) {
+	reader := strings.NewReader(text)
+	return TokenizeReader(bufio.NewReader(reader))
+}
+
+func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
+	result := make([]Token, 0)
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
