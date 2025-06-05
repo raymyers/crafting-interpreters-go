@@ -45,6 +45,14 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{LBRAC, "{", ""})
 		case '}':
 			result = append(result, Token{RBRAC, "}", ""})
+		case '*':
+			result = append(result, Token{STAR, "*", ""})
+		case '.':
+			result = append(result, Token{DOT, ".", ""})
+		case ',':
+			result = append(result, Token{COMMA, ",", ""})
+		case '+':
+			result = append(result, Token{PLUS, "+", ""})
 		}
 	}
 

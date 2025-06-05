@@ -12,6 +12,10 @@ const (
 	RPAR
 	LBRAC
 	RBRAC
+	STAR
+	DOT
+	COMMA
+	PLUS
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -20,6 +24,10 @@ var tokenTypeName = map[TokenType]string{
 	RPAR:  "RIGHT_PAREN",
 	LBRAC: "LEFT_BRACE",
 	RBRAC: "RIGHT_BRACE",
+	STAR:  "STAR",
+	DOT:   "DOT",
+	COMMA: "COMMA",
+	PLUS:  "PLUS",
 }
 
 type Token struct {
