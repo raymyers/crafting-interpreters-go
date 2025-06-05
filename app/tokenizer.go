@@ -32,6 +32,10 @@ func Tokenize(filename string) ([]Token, error) {
 			result = append(result, Token{LPAR, "(", ""})
 		case ')':
 			result = append(result, Token{RPAR, ")", ""})
+		case '{':
+			result = append(result, Token{LBRAC, "{", ""})
+		case '}':
+			result = append(result, Token{RBRAC, "}", ""})
 		}
 	}
 

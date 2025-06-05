@@ -10,12 +10,16 @@ const (
 	EOF TokenType = iota
 	LPAR
 	RPAR
+	LBRAC
+	RBRAC
 )
 
 var tokenTypeName = map[TokenType]string{
-	EOF:  "EOF",
-	LPAR: "LEFT_PAREN",
-	RPAR: "RIGHT_PAREN",
+	EOF:   "EOF",
+	LPAR:  "LEFT_PAREN",
+	RPAR:  "RIGHT_PAREN",
+	LBRAC: "LEFT_BRACE",
+	RBRAC: "RIGHT_RACE",
 }
 
 type Token struct {
