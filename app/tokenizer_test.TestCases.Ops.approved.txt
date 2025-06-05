@@ -5,6 +5,7 @@ DOT . null
 COMMA , null
 PLUS + null
 MINUS - null
+SEMICOLON ; null
 RIGHT_BRACE } null
 RIGHT_PAREN ) null
 EOF  null

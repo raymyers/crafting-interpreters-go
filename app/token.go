@@ -17,19 +17,21 @@ const (
 	COMMA
 	PLUS
 	MINUS
+	SEMICOLON
 )
 
 var tokenTypeName = map[TokenType]string{
-	EOF:   "EOF",
-	LPAR:  "LEFT_PAREN",
-	RPAR:  "RIGHT_PAREN",
-	LBRAC: "LEFT_BRACE",
-	RBRAC: "RIGHT_BRACE",
-	STAR:  "STAR",
-	DOT:   "DOT",
-	COMMA: "COMMA",
-	PLUS:  "PLUS",
-	MINUS: "MINUS",
+	EOF:       "EOF",
+	LPAR:      "LEFT_PAREN",
+	RPAR:      "RIGHT_PAREN",
+	LBRAC:     "LEFT_BRACE",
+	RBRAC:     "RIGHT_BRACE",
+	STAR:      "STAR",
+	DOT:       "DOT",
+	COMMA:     "COMMA",
+	PLUS:      "PLUS",
+	MINUS:     "MINUS",
+	SEMICOLON: "SEMICOLON",
 }
 
 type Token struct {
