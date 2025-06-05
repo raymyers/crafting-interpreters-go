@@ -59,6 +59,68 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{MINUS, "-", ""})
 		case ';':
 			result = append(result, Token{SEMICOLON, ";", ""})
+		case '!':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{BANG, "!", ""})
+				break
+			}
+			if next == '=' {
+				result = append(result, Token{BANG_EQUAL, "!=", ""})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{BANG, "!", ""})
+			}
+		case '=':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{EQUAL, "=", ""})
+				break
+			}
+			if next == '=' {
+				result = append(result, Token{EQUAL_EQUAL, "==", ""})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{EQUAL, "=", ""})
+			}
+		case '<':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{LESS, "<", ""})
+				break
+			}
+			if next == '=' {
+				result = append(result, Token{LESS_EQUAL, "<=", ""})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{LESS, "<", ""})
+			}
+		case '>':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{GREATER, ">", ""})
+				break
+			}
+			if next == '=' {
+				result = append(result, Token{GREATER_EQUAL, ">=", ""})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{GREATER, ">", ""})
+			}
+		case ' ':
+			// Skip
 		default:
 			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", b)
 			if err != nil {

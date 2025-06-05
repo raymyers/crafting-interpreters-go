@@ -18,20 +18,36 @@ const (
 	PLUS
 	MINUS
 	SEMICOLON
+	BANG
+	BANG_EQUAL
+	EQUAL
+	EQUAL_EQUAL
+	LESS
+	LESS_EQUAL
+	GREATER
+	GREATER_EQUAL
 )
 
 var tokenTypeName = map[TokenType]string{
-	EOF:       "EOF",
-	LPAR:      "LEFT_PAREN",
-	RPAR:      "RIGHT_PAREN",
-	LBRAC:     "LEFT_BRACE",
-	RBRAC:     "RIGHT_BRACE",
-	STAR:      "STAR",
-	DOT:       "DOT",
-	COMMA:     "COMMA",
-	PLUS:      "PLUS",
-	MINUS:     "MINUS",
-	SEMICOLON: "SEMICOLON",
+	EOF:           "EOF",
+	LPAR:          "LEFT_PAREN",
+	RPAR:          "RIGHT_PAREN",
+	LBRAC:         "LEFT_BRACE",
+	RBRAC:         "RIGHT_BRACE",
+	STAR:          "STAR",
+	DOT:           "DOT",
+	COMMA:         "COMMA",
+	PLUS:          "PLUS",
+	MINUS:         "MINUS",
+	SEMICOLON:     "SEMICOLON",
+	BANG:          "BANG",
+	BANG_EQUAL:    "BANG_EQUAL",
+	EQUAL:         "EQUAL",
+	EQUAL_EQUAL:   "EQUAL_EQUAL",
+	LESS:          "LESS",
+	LESS_EQUAL:    "LESS_EQUAL",
+	GREATER:       "GREATER",
+	GREATER_EQUAL: "GREATER_EQUAL",
 }
 
 type Token struct {
