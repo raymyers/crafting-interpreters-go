@@ -60,7 +60,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 		case ';':
 			result = append(result, Token{SEMICOLON, ";", ""})
 		default:
-			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: $: %c\n", b)
+			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", b)
 			if err != nil {
 				return result, err
 			}
