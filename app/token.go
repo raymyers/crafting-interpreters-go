@@ -16,6 +16,7 @@ const (
 	DOT
 	COMMA
 	PLUS
+	MINUS
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -28,6 +29,7 @@ var tokenTypeName = map[TokenType]string{
 	DOT:   "DOT",
 	COMMA: "COMMA",
 	PLUS:  "PLUS",
+	MINUS: "MINUS",
 }
 
 type Token struct {

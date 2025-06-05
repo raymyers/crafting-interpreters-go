@@ -53,7 +53,10 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{COMMA, ",", ""})
 		case '+':
 			result = append(result, Token{PLUS, "+", ""})
+		case '-':
+			result = append(result, Token{MINUS, "-", ""})
 		}
+
 	}
 
 	return result, nil
