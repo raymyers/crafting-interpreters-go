@@ -26,6 +26,7 @@ const (
 	LESS_EQUAL
 	GREATER
 	GREATER_EQUAL
+	SLASH
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -48,6 +49,7 @@ var tokenTypeName = map[TokenType]string{
 	LESS_EQUAL:    "LESS_EQUAL",
 	GREATER:       "GREATER",
 	GREATER_EQUAL: "GREATER_EQUAL",
+	SLASH:         "SLASH",
 }
 
 type Token struct {

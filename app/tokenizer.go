@@ -119,6 +119,28 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 				reader.UnreadByte()
 				result = append(result, Token{GREATER, ">", ""})
 			}
+		case '/':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{SLASH, "/", ""})
+				break
+			}
+			if next == '/' {
+				_, err := reader.ReadString('\n')
+				if err != nil && err != io.EOF {
+					return result, err
+
+				}
+			} else {
+				err := reader.UnreadByte()
+				if err != nil {
+					return nil, err
+				}
+				result = append(result, Token{SLASH, "/", ""})
+			}
 		case ' ':
 			// Skip
 		default:
