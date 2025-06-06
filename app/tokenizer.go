@@ -143,6 +143,8 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			}
 		case ' ':
 			// Skip
+		case '\t':
+			// Skip
 		default:
 			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", b)
 			if err != nil {

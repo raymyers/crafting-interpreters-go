@@ -24,6 +24,7 @@ var ParameterizedTestcases = []TestCaseParameters{
 	{name: "Ops", value: "({*.,+-;})"},
 	{name: "Compare", value: "(!=) == (<=) >= (<) >"},
 	{name: "SlashComment", value: "(/)//()"},
+	{name: "TabsSpaces", value: "( ){\t}"},
 }
 
 func TestCases(t *testing.T) {
