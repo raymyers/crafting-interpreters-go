@@ -51,6 +51,7 @@ var EvaluatorParameterizedTestcases = []EvaluatorTestCaseParameters{
 	{name: "NestedGrouping", value: "((1 + 2) * 3)"},
 	{name: "MixedTypes", value: `"hello" == "world"`},
 	{name: "FloatNumbers", value: "3.14 + 2.71"},
+	{name: "GroupedString", value: `( "hello" )`},
 }
 
 func TestEvaluatorCases(t *testing.T) {

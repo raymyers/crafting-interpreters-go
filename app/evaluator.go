@@ -26,10 +26,10 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
 	return nil
 }
 
-// VisitGroupingExpr evaluates grouping expressions (placeholder for now)
+// VisitGroupingExpr evaluates grouping expressions
 func (e *Evaluator) VisitGroupingExpr(expr *Grouping) interface{} {
-	// TODO: Implement grouping expression evaluation
-	return nil
+	result, _ := e.Evaluate(expr.Expression)
+	return result
 }
 
 // VisitUnaryExpr evaluates unary expressions (placeholder for now)
