@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
+	"unicode"
 )
 
 func TokenizeFile(filename string) ([]Token, error) {
@@ -178,11 +180,47 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 				}
 			}
 		default:
-			_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
-			if err != nil {
-				return result, err
+			if unicode.IsDigit(rune(b)) {
+				// Number literal
+				var numberStr strings.Builder
+				numberStr.WriteByte(b)
+				
+				for {
+					next, err := reader.ReadByte()
+					if err != nil {
+						if err == io.EOF {
+							break
+						}
+						return result, err
+					}
+					
+					if unicode.IsDigit(rune(next)) || next == '.' {
+						numberStr.WriteByte(next)
+					} else {
+						reader.UnreadByte()
+						break
+					}
+				}
+				
+				numStr := numberStr.String()
+				// Parse as float to get the literal value
+				floatVal, err := strconv.ParseFloat(numStr, 64)
+				if err != nil {
+					_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Invalid number: %s\n", lineNo, numStr)
+					if err != nil {
+						return result, err
+					}
+					errors = append(errors, fmt.Sprintf("invalid number: %s", numStr))
+				} else {
+					result = append(result, Token{NUMBER, numStr, fmt.Sprintf("%.1f", floatVal)})
+				}
+			} else {
+				_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
+				if err != nil {
+					return result, err
+				}
+				errors = append(errors, fmt.Sprintf("unexpected character: %c", b))
 			}
-			errors = append(errors, fmt.Sprintf("unexpected character: %c", b))
 		}
 
 	}
