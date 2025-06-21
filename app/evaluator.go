@@ -20,9 +20,31 @@ func (e *Evaluator) VisitLiteralExpr(expr *Literal) interface{} {
 	return expr.Value
 }
 
-// VisitBinaryExpr evaluates binary expressions (placeholder for now)
+// VisitBinaryExpr evaluates binary expressions
 func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
-	// TODO: Implement binary expression evaluation
+	left, _ := e.Evaluate(expr.Left)
+	right, _ := e.Evaluate(expr.Right)
+
+	switch expr.Operator.Type {
+	case STAR:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				return leftNum * rightNum
+			}
+		}
+		return nil
+	case SLASH:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				if rightNum == 0 {
+					return nil // Division by zero
+				}
+				return leftNum / rightNum
+			}
+		}
+		return nil
+	}
+
 	return nil
 }
 
@@ -35,7 +57,7 @@ func (e *Evaluator) VisitGroupingExpr(expr *Grouping) interface{} {
 // VisitUnaryExpr evaluates unary expressions
 func (e *Evaluator) VisitUnaryExpr(expr *Unary) interface{} {
 	right, _ := e.Evaluate(expr.Right)
-	
+
 	switch expr.Operator.Type {
 	case MINUS:
 		if num, ok := right.(float64); ok {
@@ -45,7 +67,7 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) interface{} {
 	case BANG:
 		return !isTruthy(right)
 	}
-	
+
 	return nil
 }
 
