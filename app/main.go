@@ -104,6 +104,8 @@ func formatValue(value Value) string {
 			return "true"
 		}
 		return "false"
+	case ErrorValue:
+		return fmt.Sprintf("[Line %d] Error: %s", v.Line, v.Message)
 	default:
 		return fmt.Sprintf("%v", value)
 	}

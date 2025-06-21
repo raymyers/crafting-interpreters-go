@@ -94,6 +94,7 @@ type Token struct {
 	Type    TokenType
 	Lexeme  string
 	Literal string
+	Line    uint
 }
 
 func (t *Token) String() string {

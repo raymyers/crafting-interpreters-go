@@ -31,6 +31,13 @@ type NilValue struct{}
 
 func (NilValue) implValue() {}
 
+type ErrorValue struct {
+	Message string
+	Line    uint
+}
+
+func (ErrorValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
 	Accept(visitor ExprVisitor) Value
@@ -49,6 +56,7 @@ type Binary struct {
 	Left     Expr
 	Operator Token
 	Right    Expr
+	Line     uint
 }
 
 func (b *Binary) Accept(visitor ExprVisitor) Value {
@@ -58,6 +66,7 @@ func (b *Binary) Accept(visitor ExprVisitor) Value {
 // Grouping represents a grouped expression (e.g., (1 + 2))
 type Grouping struct {
 	Expression Expr
+	Line       uint
 }
 
 func (g *Grouping) Accept(visitor ExprVisitor) Value {
@@ -67,6 +76,7 @@ func (g *Grouping) Accept(visitor ExprVisitor) Value {
 // Literal represents a literal value (e.g., 42, "hello", true)
 type Literal struct {
 	Value Value
+	Line  uint
 }
 
 func (l *Literal) Accept(visitor ExprVisitor) Value {
@@ -77,6 +87,7 @@ func (l *Literal) Accept(visitor ExprVisitor) Value {
 type Unary struct {
 	Operator Token
 	Right    Expr
+	Line     uint
 }
 
 func (u *Unary) Accept(visitor ExprVisitor) Value {

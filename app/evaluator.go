@@ -37,66 +37,66 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 				return StringValue{Val: leftStr.Val + rightStr.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be two numbers or two strings", Line: expr.Line}
 	case MINUS:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return NumberValue{Val: leftNum.Val - rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case STAR:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return NumberValue{Val: leftNum.Val * rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case SLASH:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				if rightNum.Val == 0 {
-					return NilValue{} // Division by zero
+					return ErrorValue{Message: "Division by zero", Line: expr.Line}
 				}
 				return NumberValue{Val: leftNum.Val / rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case LESS:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return BoolValue{Val: leftNum.Val < rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case LESS_EQUAL:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return BoolValue{Val: leftNum.Val <= rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case GREATER:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return BoolValue{Val: leftNum.Val > rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case GREATER_EQUAL:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
 				return BoolValue{Val: leftNum.Val >= rightNum.Val}
 			}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case EQUAL_EQUAL:
 		return BoolValue{Val: isEqual(left, right)}
 	case BANG_EQUAL:
 		return BoolValue{Val: !isEqual(left, right)}
 	}
 
-	return NilValue{}
+	return ErrorValue{Message: "Unknown binary operator", Line: expr.Line}
 }
 
 // VisitGroupingExpr evaluates grouping expressions
@@ -114,12 +114,12 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 		if num, ok := right.(NumberValue); ok {
 			return NumberValue{Val: -num.Val}
 		}
-		return NilValue{}
+		return ErrorValue{Message: "Operand must be a number", Line: expr.Line}
 	case BANG:
 		return BoolValue{Val: !isTruthy(right)}
 	}
 
-	return NilValue{}
+	return ErrorValue{Message: "Unknown unary operator", Line: expr.Line}
 }
 
 // isTruthy determines the truthiness of a value following Lox rules
