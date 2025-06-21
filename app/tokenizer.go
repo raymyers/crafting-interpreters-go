@@ -212,7 +212,13 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					}
 					errors = append(errors, fmt.Sprintf("invalid number: %s", numStr))
 				} else {
-					result = append(result, Token{NUMBER, numStr, fmt.Sprintf("%.1f", floatVal)})
+					// Format with minimum 1 decimal place but only as many as needed
+					formatted := fmt.Sprintf("%g", floatVal)
+					// If no decimal point, add .0
+					if !strings.Contains(formatted, ".") {
+						formatted += ".0"
+					}
+					result = append(result, Token{NUMBER, numStr, formatted})
 				}
 			} else {
 				_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
