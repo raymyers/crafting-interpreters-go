@@ -135,6 +135,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					return result, err
 
 				}
+				lineNo++
 			} else {
 				err := reader.UnreadByte()
 				if err != nil {
