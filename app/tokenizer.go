@@ -215,8 +215,9 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					}
 					errors = append(errors, fmt.Sprintf("invalid number: %s", idStr))
 				} else {
-
-					result = append(result, Token{IDENTIFIER, idStr, ""})
+					// Check if identifier is a reserved word
+					tokenType := getTokenTypeForIdentifier(idStr)
+					result = append(result, Token{tokenType, idStr, ""})
 				}
 			} else {
 				_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
@@ -283,4 +284,43 @@ func readIdentifier(reader *bufio.Reader, b byte, result []Token) (string, []Tok
 
 	numStr := numberStr.String()
 	return numStr, nil, nil
+}
+
+func getTokenTypeForIdentifier(identifier string) TokenType {
+	switch identifier {
+	case "and":
+		return AND
+	case "class":
+		return CLASS
+	case "else":
+		return ELSE
+	case "false":
+		return FALSE
+	case "for":
+		return FOR
+	case "fun":
+		return FUN
+	case "if":
+		return IF
+	case "nil":
+		return NIL
+	case "or":
+		return OR
+	case "print":
+		return PRINT
+	case "return":
+		return RETURN
+	case "super":
+		return SUPER
+	case "this":
+		return THIS
+	case "true":
+		return TRUE
+	case "var":
+		return VAR
+	case "while":
+		return WHILE
+	default:
+		return IDENTIFIER
+	}
 }

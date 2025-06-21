@@ -29,6 +29,7 @@ var ParameterizedTestcases = []TestCaseParameters{
 	{name: "StringLit", value: `( "Hello World" )`},
 	{name: "NumberLit", value: "42 3.14 0.5 1757.7378"},
 	{name: "Identifier", value: "foo_bar a b _"},
+	{name: "Keywords", value: "and class else false for fun if nil or print return super this true var while"},
 }
 
 func TestCases(t *testing.T) {

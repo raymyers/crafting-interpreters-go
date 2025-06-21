@@ -30,6 +30,22 @@ const (
 	STRING
 	NUMBER
 	IDENTIFIER
+	AND
+	CLASS
+	ELSE
+	FALSE
+	FOR
+	FUN
+	IF
+	NIL
+	OR
+	PRINT
+	RETURN
+	SUPER
+	THIS
+	TRUE
+	VAR
+	WHILE
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -56,6 +72,22 @@ var tokenTypeName = map[TokenType]string{
 	STRING:        "STRING",
 	NUMBER:        "NUMBER",
 	IDENTIFIER:    "IDENTIFIER",
+	AND:           "AND",
+	CLASS:         "CLASS",
+	ELSE:          "ELSE",
+	FALSE:         "FALSE",
+	FOR:           "FOR",
+	FUN:           "FUN",
+	IF:            "IF",
+	NIL:           "NIL",
+	OR:            "OR",
+	PRINT:         "PRINT",
+	RETURN:        "RETURN",
+	SUPER:         "SUPER",
+	THIS:          "THIS",
+	TRUE:          "TRUE",
+	VAR:           "VAR",
+	WHILE:         "WHILE",
 }
 
 type Token struct {
