@@ -13,47 +13,49 @@ func (ap *AstPrinter) Print(expr Expr) string {
 	if expr == nil {
 		return ""
 	}
-	return expr.Accept(ap).(string)
+	result := expr.Accept(ap)
+	if str, ok := result.(StringValue); ok {
+		return str.Val
+	}
+	return ""
 }
 
 // VisitBinaryExpr prints binary expressions as (operator left right)
-func (ap *AstPrinter) VisitBinaryExpr(expr *Binary) interface{} {
-	return ap.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)
+func (ap *AstPrinter) VisitBinaryExpr(expr *Binary) Value {
+	return StringValue{Val: ap.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)}
 }
 
 // VisitGroupingExpr prints grouping expressions as (group expression)
-func (ap *AstPrinter) VisitGroupingExpr(expr *Grouping) interface{} {
-	return ap.parenthesize("group", expr.Expression)
+func (ap *AstPrinter) VisitGroupingExpr(expr *Grouping) Value {
+	return StringValue{Val: ap.parenthesize("group", expr.Expression)}
 }
 
 // VisitLiteralExpr prints literal values
-func (ap *AstPrinter) VisitLiteralExpr(expr *Literal) interface{} {
-	if expr.Value == nil {
-		return "nil"
-	}
-
+func (ap *AstPrinter) VisitLiteralExpr(expr *Literal) Value {
 	switch v := expr.Value.(type) {
-	case float64:
+	case NilValue:
+		return StringValue{Val: "nil"}
+	case NumberValue:
 		// Format numbers to match expected output
-		if v == float64(int64(v)) {
-			return fmt.Sprintf("%.1f", v)
+		if v.Val == float64(int64(v.Val)) {
+			return StringValue{Val: fmt.Sprintf("%.1f", v.Val)}
 		}
-		return fmt.Sprintf("%g", v)
-	case string:
-		return v
-	case bool:
-		if v {
-			return "true"
+		return StringValue{Val: fmt.Sprintf("%g", v.Val)}
+	case StringValue:
+		return StringValue{Val: v.Val}
+	case BoolValue:
+		if v.Val {
+			return StringValue{Val: "true"}
 		}
-		return "false"
+		return StringValue{Val: "false"}
 	default:
-		return fmt.Sprintf("%v", expr.Value)
+		return StringValue{Val: fmt.Sprintf("%v", expr.Value)}
 	}
 }
 
 // VisitUnaryExpr prints unary expressions as (operator operand)
-func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) interface{} {
-	return ap.parenthesize(expr.Operator.Lexeme, expr.Right)
+func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) Value {
+	return StringValue{Val: ap.parenthesize(expr.Operator.Lexeme, expr.Right)}
 }
 
 // parenthesize wraps expressions in parentheses with the operator/name first
@@ -65,7 +67,10 @@ func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 
 	for _, expr := range exprs {
 		builder.WriteString(" ")
-		builder.WriteString(expr.Accept(ap).(string))
+		result := expr.Accept(ap)
+		if str, ok := result.(StringValue); ok {
+			builder.WriteString(str.Val)
+		}
 	}
 
 	builder.WriteString(")")

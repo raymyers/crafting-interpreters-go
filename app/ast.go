@@ -1,16 +1,47 @@
 package main
 
+// Value represents a runtime value in the Lox language
+type Value interface {
+	implValue()
+}
+
+// StringValue represents a string literal
+type StringValue struct {
+	Val string
+}
+
+func (StringValue) implValue() {}
+
+// NumberValue represents a numeric literal (float64)
+type NumberValue struct {
+	Val float64
+}
+
+func (NumberValue) implValue() {}
+
+// BoolValue represents a boolean literal
+type BoolValue struct {
+	Val bool
+}
+
+func (BoolValue) implValue() {}
+
+// NilValue represents the nil value
+type NilValue struct{}
+
+func (NilValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
-	Accept(visitor ExprVisitor) interface{}
+	Accept(visitor ExprVisitor) Value
 }
 
 // ExprVisitor defines the visitor pattern for expressions
 type ExprVisitor interface {
-	VisitBinaryExpr(expr *Binary) interface{}
-	VisitGroupingExpr(expr *Grouping) interface{}
-	VisitLiteralExpr(expr *Literal) interface{}
-	VisitUnaryExpr(expr *Unary) interface{}
+	VisitBinaryExpr(expr *Binary) Value
+	VisitGroupingExpr(expr *Grouping) Value
+	VisitLiteralExpr(expr *Literal) Value
+	VisitUnaryExpr(expr *Unary) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -20,7 +51,7 @@ type Binary struct {
 	Right    Expr
 }
 
-func (b *Binary) Accept(visitor ExprVisitor) interface{} {
+func (b *Binary) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitBinaryExpr(b)
 }
 
@@ -29,16 +60,16 @@ type Grouping struct {
 	Expression Expr
 }
 
-func (g *Grouping) Accept(visitor ExprVisitor) interface{} {
+func (g *Grouping) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitGroupingExpr(g)
 }
 
 // Literal represents a literal value (e.g., 42, "hello", true)
 type Literal struct {
-	Value interface{}
+	Value Value
 }
 
-func (l *Literal) Accept(visitor ExprVisitor) interface{} {
+func (l *Literal) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitLiteralExpr(l)
 }
 
@@ -48,6 +79,6 @@ type Unary struct {
 	Right    Expr
 }
 
-func (u *Unary) Accept(visitor ExprVisitor) interface{} {
+func (u *Unary) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitUnaryExpr(u)
 }

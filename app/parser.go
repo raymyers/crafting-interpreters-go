@@ -122,15 +122,15 @@ func (p *Parser) unary() (Expr, error) {
 // primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
-		return &Literal{Value: false}, nil
+		return &Literal{Value: BoolValue{Val: false}}, nil
 	}
 
 	if p.match(TRUE) {
-		return &Literal{Value: true}, nil
+		return &Literal{Value: BoolValue{Val: true}}, nil
 	}
 
 	if p.match(NIL) {
-		return &Literal{Value: nil}, nil
+		return &Literal{Value: NilValue{}}, nil
 	}
 
 	if p.match(NUMBER) {
@@ -139,14 +139,14 @@ func (p *Parser) primary() (Expr, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid number: %s", token.Lexeme)
 		}
-		return &Literal{Value: value}, nil
+		return &Literal{Value: NumberValue{Val: value}}, nil
 	}
 
 	if p.match(STRING) {
 		token := p.previous()
 		// Remove quotes from string literal
 		value := token.Literal
-		return &Literal{Value: value}, nil
+		return &Literal{Value: StringValue{Val: value}}, nil
 	}
 
 	if p.match(LPAR) {

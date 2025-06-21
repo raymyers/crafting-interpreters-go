@@ -91,18 +91,16 @@ func handleEvaluate(filename string) {
 	fmt.Println(formatValue(result))
 }
 
-func formatValue(value interface{}) string {
-	if value == nil {
-		return "nil"
-	}
-
+func formatValue(value Value) string {
 	switch v := value.(type) {
-	case float64:
-		return fmt.Sprintf("%g", v)
-	case string:
-		return v
-	case bool:
-		if v {
+	case NilValue:
+		return "nil"
+	case NumberValue:
+		return fmt.Sprintf("%g", v.Val)
+	case StringValue:
+		return v.Val
+	case BoolValue:
+		if v.Val {
 			return "true"
 		}
 		return "false"

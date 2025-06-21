@@ -8,141 +8,150 @@ import (
 type Evaluator struct{}
 
 // Evaluate evaluates an expression and returns its value
-func (e *Evaluator) Evaluate(expr Expr) (interface{}, error) {
+func (e *Evaluator) Evaluate(expr Expr) (Value, error) {
 	if expr == nil {
-		return nil, fmt.Errorf("expression is nil")
+		return NilValue{}, fmt.Errorf("expression is nil")
 	}
 	return expr.Accept(e), nil
 }
 
 // VisitLiteralExpr evaluates literal expressions
-func (e *Evaluator) VisitLiteralExpr(expr *Literal) interface{} {
+func (e *Evaluator) VisitLiteralExpr(expr *Literal) Value {
 	return expr.Value
 }
 
 // VisitBinaryExpr evaluates binary expressions
-func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
+func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 	left, _ := e.Evaluate(expr.Left)
 	right, _ := e.Evaluate(expr.Right)
 
 	switch expr.Operator.Type {
 	case PLUS:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum + rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return NumberValue{Val: leftNum.Val + rightNum.Val}
 			}
 		}
-		if leftStr, ok := left.(string); ok {
-			if rightStr, ok := right.(string); ok {
-				return leftStr + rightStr
+		if leftStr, ok := left.(StringValue); ok {
+			if rightStr, ok := right.(StringValue); ok {
+				return StringValue{Val: leftStr.Val + rightStr.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case MINUS:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum - rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return NumberValue{Val: leftNum.Val - rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case STAR:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum * rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return NumberValue{Val: leftNum.Val * rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case SLASH:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				if rightNum == 0 {
-					return nil // Division by zero
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				if rightNum.Val == 0 {
+					return NilValue{} // Division by zero
 				}
-				return leftNum / rightNum
+				return NumberValue{Val: leftNum.Val / rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case LESS:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum < rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return BoolValue{Val: leftNum.Val < rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case LESS_EQUAL:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum <= rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return BoolValue{Val: leftNum.Val <= rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case GREATER:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum > rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return BoolValue{Val: leftNum.Val > rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case GREATER_EQUAL:
-		if leftNum, ok := left.(float64); ok {
-			if rightNum, ok := right.(float64); ok {
-				return leftNum >= rightNum
+		if leftNum, ok := left.(NumberValue); ok {
+			if rightNum, ok := right.(NumberValue); ok {
+				return BoolValue{Val: leftNum.Val >= rightNum.Val}
 			}
 		}
-		return nil
+		return NilValue{}
 	case EQUAL_EQUAL:
-		return isEqual(left, right)
+		return BoolValue{Val: isEqual(left, right)}
 	case BANG_EQUAL:
-		return !isEqual(left, right)
+		return BoolValue{Val: !isEqual(left, right)}
 	}
 
-	return nil
+	return NilValue{}
 }
 
 // VisitGroupingExpr evaluates grouping expressions
-func (e *Evaluator) VisitGroupingExpr(expr *Grouping) interface{} {
+func (e *Evaluator) VisitGroupingExpr(expr *Grouping) Value {
 	result, _ := e.Evaluate(expr.Expression)
 	return result
 }
 
 // VisitUnaryExpr evaluates unary expressions
-func (e *Evaluator) VisitUnaryExpr(expr *Unary) interface{} {
+func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 	right, _ := e.Evaluate(expr.Right)
 
 	switch expr.Operator.Type {
 	case MINUS:
-		if num, ok := right.(float64); ok {
-			return -num
+		if num, ok := right.(NumberValue); ok {
+			return NumberValue{Val: -num.Val}
 		}
-		return nil
+		return NilValue{}
 	case BANG:
-		return !isTruthy(right)
+		return BoolValue{Val: !isTruthy(right)}
 	}
 
-	return nil
+	return NilValue{}
 }
 
 // isTruthy determines the truthiness of a value following Lox rules
-func isTruthy(value interface{}) bool {
-	if value == nil {
+func isTruthy(value Value) bool {
+	switch v := value.(type) {
+	case NilValue:
 		return false
+	case BoolValue:
+		return v.Val
+	default:
+		return true
 	}
-	if b, ok := value.(bool); ok {
-		return b
-	}
-	return true
 }
 
 // isEqual determines if two values are equal following Lox rules
-func isEqual(left, right interface{}) bool {
-	// nil is only equal to nil
-	if left == nil && right == nil {
-		return true
+func isEqual(left, right Value) bool {
+	switch l := left.(type) {
+	case NilValue:
+		_, ok := right.(NilValue)
+		return ok
+	case BoolValue:
+		if r, ok := right.(BoolValue); ok {
+			return l.Val == r.Val
+		}
+	case NumberValue:
+		if r, ok := right.(NumberValue); ok {
+			return l.Val == r.Val
+		}
+	case StringValue:
+		if r, ok := right.(StringValue); ok {
+			return l.Val == r.Val
+		}
 	}
-	if left == nil || right == nil {
-		return false
-	}
-	
-	// If both are the same type, compare directly
-	return left == right
+	return false
 }
