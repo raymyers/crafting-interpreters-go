@@ -90,6 +90,10 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
 			}
 		}
 		return nil
+	case EQUAL_EQUAL:
+		return isEqual(left, right)
+	case BANG_EQUAL:
+		return !isEqual(left, right)
 	}
 
 	return nil
@@ -127,4 +131,18 @@ func isTruthy(value interface{}) bool {
 		return b
 	}
 	return true
+}
+
+// isEqual determines if two values are equal following Lox rules
+func isEqual(left, right interface{}) bool {
+	// nil is only equal to nil
+	if left == nil && right == nil {
+		return true
+	}
+	if left == nil || right == nil {
+		return false
+	}
+	
+	// If both are the same type, compare directly
+	return left == right
 }
