@@ -181,28 +181,10 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			}
 		default:
 			if unicode.IsDigit(rune(b)) {
-				// Number literal
-				var numberStr strings.Builder
-				numberStr.WriteByte(b)
-
-				for {
-					next, err := reader.ReadByte()
-					if err != nil {
-						if err == io.EOF {
-							break
-						}
-						return result, err
-					}
-
-					if unicode.IsDigit(rune(next)) || next == '.' {
-						numberStr.WriteByte(next)
-					} else {
-						reader.UnreadByte()
-						break
-					}
+				numStr, tokens, err2 := readNumberLiteral(reader, b, result)
+				if err2 != nil {
+					return tokens, err2
 				}
-
-				numStr := numberStr.String()
 				// Parse as float to get the literal value
 				floatVal, err := strconv.ParseFloat(numStr, 64)
 				if err != nil {
@@ -220,6 +202,22 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					}
 					result = append(result, Token{NUMBER, numStr, formatted})
 				}
+			} else if unicode.IsLetter(rune(b)) || b == '_' {
+				idStr, tokens, err2 := readIdentifier(reader, b, result)
+				if err2 != nil {
+					return tokens, err2
+				}
+
+				if err != nil {
+					_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Invalid number: %s\n", lineNo, idStr)
+					if err != nil {
+						return result, err
+					}
+					errors = append(errors, fmt.Sprintf("invalid number: %s", idStr))
+				} else {
+
+					result = append(result, Token{IDENTIFIER, idStr, ""})
+				}
 			} else {
 				_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
 				if err != nil {
@@ -234,4 +232,55 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 		return result, fmt.Errorf("tokenization errors: %s", strings.Join(errors, "; "))
 	}
 	return result, nil
+}
+
+func readNumberLiteral(reader *bufio.Reader, b byte, result []Token) (string, []Token, error) {
+	// Number literal
+	var numberStr strings.Builder
+	numberStr.WriteByte(b)
+
+	for {
+		next, err := reader.ReadByte()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", result, err
+		}
+
+		if unicode.IsDigit(rune(next)) || next == '.' {
+			numberStr.WriteByte(next)
+		} else {
+			reader.UnreadByte()
+			break
+		}
+	}
+
+	numStr := numberStr.String()
+	return numStr, nil, nil
+}
+
+func readIdentifier(reader *bufio.Reader, b byte, result []Token) (string, []Token, error) {
+	var numberStr strings.Builder
+	numberStr.WriteByte(b)
+
+	for {
+		next, err := reader.ReadByte()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", result, err
+		}
+
+		if unicode.IsDigit(rune(next)) || unicode.IsLetter(rune(next)) || next == '_' {
+			numberStr.WriteByte(next)
+		} else {
+			reader.UnreadByte()
+			break
+		}
+	}
+
+	numStr := numberStr.String()
+	return numStr, nil, nil
 }

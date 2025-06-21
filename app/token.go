@@ -29,6 +29,7 @@ const (
 	SLASH
 	STRING
 	NUMBER
+	IDENTIFIER
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -54,6 +55,7 @@ var tokenTypeName = map[TokenType]string{
 	SLASH:         "SLASH",
 	STRING:        "STRING",
 	NUMBER:        "NUMBER",
+	IDENTIFIER:    "IDENTIFIER",
 }
 
 type Token struct {

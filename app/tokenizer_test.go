@@ -28,6 +28,7 @@ var ParameterizedTestcases = []TestCaseParameters{
 	{name: "MultiLine", value: "(\n)"},
 	{name: "StringLit", value: `( "Hello World" )`},
 	{name: "NumberLit", value: "42 3.14 0.5 1757.7378"},
+	{name: "Identifier", value: "foo_bar a b _"},
 }
 
 func TestCases(t *testing.T) {
