@@ -62,6 +62,34 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
 			}
 		}
 		return nil
+	case LESS:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				return leftNum < rightNum
+			}
+		}
+		return nil
+	case LESS_EQUAL:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				return leftNum <= rightNum
+			}
+		}
+		return nil
+	case GREATER:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				return leftNum > rightNum
+			}
+		}
+		return nil
+	case GREATER_EQUAL:
+		if leftNum, ok := left.(float64); ok {
+			if rightNum, ok := right.(float64); ok {
+				return leftNum >= rightNum
+			}
+		}
+		return nil
 	}
 
 	return nil
