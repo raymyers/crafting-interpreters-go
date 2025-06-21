@@ -1,7 +1,6 @@
 package main
 
 import (
-	approvals "github.com/approvals/go-approval-tests"
 	"testing"
 )
 
@@ -27,38 +26,39 @@ func evaluateToString(input string) string {
 }
 
 type EvaluatorTestCaseParameters struct {
-	name  string
-	value string
+	name     string
+	value    string
+	expected string
 }
 
 var EvaluatorParameterizedTestcases = []EvaluatorTestCaseParameters{
-	{name: "Number", value: "42"},
-	{name: "String", value: `"hello"`},
-	{name: "Boolean", value: "true"},
-	{name: "Nil", value: "nil"},
-	{name: "Addition", value: "2 + 3"},
-	{name: "Subtraction", value: "5 - 2"},
-	{name: "Multiplication", value: "4 * 6"},
-	{name: "Division", value: "8 / 2"},
-	{name: "LessThan", value: "3 < 5"},
-	{name: "LessThanOrEqual", value: "3 <= 5"},
-	{name: "GreaterThan", value: "5 > 3"},
-	{name: "GreaterThanOrEqual", value: "5 >= 3"},
-	{name: "Equality", value: "1 == 1"},
-	{name: "Inequality", value: "1 != 2"},
-	{name: "UnaryMinus", value: "-42"},
-	{name: "UnaryMinusFloat", value: "-73"},
-	{name: "UnaryBang", value: "!true"},
-	{name: "UnaryBangFloat", value: "!10.40"},
-	{name: "UnaryBangGrouped", value: "!((false))"},
-	{name: "Grouping", value: "(2 + 3)"},
-	{name: "ComplexExpression", value: "2 + 3 * 4"},
-	{name: "GroupedExpression", value: "(2 + 3) * 4"},
-	{name: "NestedGrouping", value: "((1 + 2) * 3)"},
-	{name: "MixedTypes", value: `"hello" == "world"`},
-	{name: "FloatNumbers", value: "3.14 + 2.71"},
-	{name: "GroupedString", value: `( "hello" )`},
-	{name: "StringConcat", value: `"hel" + "lo"`},
+	{name: "Number", value: "42", expected: "42"},
+	{name: "String", value: `"hello"`, expected: "hello"},
+	{name: "Boolean", value: "true", expected: "true"},
+	{name: "Nil", value: "nil", expected: "nil"},
+	{name: "Addition", value: "2 + 3", expected: "5"},
+	{name: "Subtraction", value: "5 - 2", expected: "3"},
+	{name: "Multiplication", value: "4 * 6", expected: "24"},
+	{name: "Division", value: "8 / 2", expected: "4"},
+	{name: "LessThan", value: "3 < 5", expected: "true"},
+	{name: "LessThanOrEqual", value: "3 <= 5", expected: "true"},
+	{name: "GreaterThan", value: "5 > 3", expected: "true"},
+	{name: "GreaterThanOrEqual", value: "5 >= 3", expected: "true"},
+	{name: "Equality", value: "1 == 1", expected: "nil"},
+	{name: "Inequality", value: "1 != 2", expected: "nil"},
+	{name: "UnaryMinus", value: "-42", expected: "-42"},
+	{name: "UnaryMinusFloat", value: "-73", expected: "-73"},
+	{name: "UnaryBang", value: "!true", expected: "false"},
+	{name: "UnaryBangFloat", value: "!10.40", expected: "false"},
+	{name: "UnaryBangGrouped", value: "!((false))", expected: "true"},
+	{name: "Grouping", value: "(2 + 3)", expected: "5"},
+	{name: "ComplexExpression", value: "2 + 3 * 4", expected: "14"},
+	{name: "GroupedExpression", value: "(2 + 3) * 4", expected: "20"},
+	{name: "NestedGrouping", value: "((1 + 2) * 3)", expected: "9"},
+	{name: "MixedTypes", value: `"hello" == "world"`, expected: "nil"},
+	{name: "FloatNumbers", value: "3.14 + 2.71", expected: "5.85"},
+	{name: "GroupedString", value: `( "hello" )`, expected: "hello"},
+	{name: "StringConcat", value: `"hel" + "lo"`, expected: "hello"},
 }
 
 func TestEvaluatorCases(t *testing.T) {
@@ -67,7 +67,9 @@ func TestEvaluatorCases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			result := evaluateToString(tc.value)
-			approvals.VerifyString(t, result)
+			if result != tc.expected {
+				t.Errorf("Test %s failed: expected %q, got %q", tc.name, tc.expected, result)
+			}
 		})
 	}
 }
