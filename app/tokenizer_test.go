@@ -27,7 +27,7 @@ var ParameterizedTestcases = []TestCaseParameters{
 	{name: "TabsSpaces", value: "( ){\t}"},
 	{name: "MultiLine", value: "(\n)"},
 	{name: "StringLit", value: `( "Hello World" )`},
-	{name: "NumberLit", value: "42 3.14 0.5"},
+	{name: "NumberLit", value: "42 3.14 0.5 1757.7378"},
 }
 
 func TestCases(t *testing.T) {

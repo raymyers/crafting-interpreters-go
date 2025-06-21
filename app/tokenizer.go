@@ -167,7 +167,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					}
 					return result, err
 				}
-				
+
 				if b == '"' {
 					// End of string
 					result = append(result, Token{STRING, fmt.Sprintf("\"%s\"", stringValue.String()), stringValue.String()})
@@ -184,7 +184,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 				// Number literal
 				var numberStr strings.Builder
 				numberStr.WriteByte(b)
-				
+
 				for {
 					next, err := reader.ReadByte()
 					if err != nil {
@@ -193,7 +193,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 						}
 						return result, err
 					}
-					
+
 					if unicode.IsDigit(rune(next)) || next == '.' {
 						numberStr.WriteByte(next)
 					} else {
@@ -201,7 +201,7 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 						break
 					}
 				}
-				
+
 				numStr := numberStr.String()
 				// Parse as float to get the literal value
 				floatVal, err := strconv.ParseFloat(numStr, 64)
