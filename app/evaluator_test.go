@@ -2,7 +2,6 @@ package main
 
 import (
 	approvals "github.com/approvals/go-approval-tests"
-	"fmt"
 	"testing"
 )
 
@@ -24,7 +23,7 @@ func evaluateToString(input string) string {
 		return "Evaluation error: " + err.Error()
 	}
 
-	return fmt.Sprintf("%v", result)
+	return formatValue(result)
 }
 
 type EvaluatorTestCaseParameters struct {
