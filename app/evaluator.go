@@ -32,8 +32,30 @@ func (e *Evaluator) VisitGroupingExpr(expr *Grouping) interface{} {
 	return result
 }
 
-// VisitUnaryExpr evaluates unary expressions (placeholder for now)
+// VisitUnaryExpr evaluates unary expressions
 func (e *Evaluator) VisitUnaryExpr(expr *Unary) interface{} {
-	// TODO: Implement unary expression evaluation
+	right, _ := e.Evaluate(expr.Right)
+	
+	switch expr.Operator.Type {
+	case MINUS:
+		if num, ok := right.(float64); ok {
+			return -num
+		}
+		return nil
+	case BANG:
+		return !isTruthy(right)
+	}
+	
 	return nil
+}
+
+// isTruthy determines the truthiness of a value following Lox rules
+func isTruthy(value interface{}) bool {
+	if value == nil {
+		return false
+	}
+	if b, ok := value.(bool); ok {
+		return b
+	}
+	return true
 }
