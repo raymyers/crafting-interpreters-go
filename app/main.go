@@ -7,18 +7,25 @@ import (
 
 func main() {
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh tokenize <filename>")
+		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> <filename>")
 		os.Exit(1)
 	}
 
 	command := os.Args[1]
+	filename := os.Args[2]
 
-	if command != "tokenize" {
+	switch command {
+	case "tokenize":
+		handleTokenize(filename)
+	case "parse":
+		handleParse(filename)
+	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
 		os.Exit(1)
 	}
+}
 
-	filename := os.Args[2]
+func handleTokenize(filename string) {
 	tokenized, tokenizeErr := TokenizeFile(filename)
 
 	for _, tok := range tokenized {
@@ -30,16 +37,26 @@ func main() {
 	if tokenizeErr != nil {
 		os.Exit(65)
 	}
+}
 
-	//fileContents, err := os.ReadFile(filename)
-	//if err != nil {
-	//	fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
-	//	os.Exit(1)
-	//}
-	//
-	//if len(fileContents) > 0 {
-	//
-	//} else {
-	//	fmt.Println("EOF  null") // Placeholder, replace this line when implementing the scanner
-	//}
+func handleParse(filename string) {
+	// Tokenize the file first
+	tokens, tokenizeErr := TokenizeFile(filename)
+	if tokenizeErr != nil {
+		fmt.Fprintf(os.Stderr, "Tokenization error: %v\n", tokenizeErr)
+		os.Exit(65)
+	}
+
+	// Parse the tokens into an AST
+	parser := NewParser(tokens)
+	expr, parseErr := parser.Parse()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Parse error: %v\n", parseErr)
+		os.Exit(65)
+	}
+
+	// Print the AST as S-expression
+	printer := &AstPrinter{}
+	result := printer.Print(expr)
+	fmt.Println(result)
 }
