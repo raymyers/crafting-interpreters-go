@@ -31,7 +31,7 @@ func (ap *AstPrinter) VisitLiteralExpr(expr *Literal) interface{} {
 	if expr.Value == nil {
 		return "nil"
 	}
-	
+
 	switch v := expr.Value.(type) {
 	case float64:
 		// Format numbers to match expected output
@@ -59,15 +59,15 @@ func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) interface{} {
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder
-	
+
 	builder.WriteString("(")
 	builder.WriteString(name)
-	
+
 	for _, expr := range exprs {
 		builder.WriteString(" ")
 		builder.WriteString(expr.Accept(ap).(string))
 	}
-	
+
 	builder.WriteString(")")
 	return builder.String()
 }

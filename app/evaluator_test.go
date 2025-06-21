@@ -55,6 +55,7 @@ var EvaluatorParameterizedTestcases = []EvaluatorTestCaseParameters{
 	{name: "MixedTypes", value: `"hello" == "world"`},
 	{name: "FloatNumbers", value: "3.14 + 2.71"},
 	{name: "GroupedString", value: `( "hello" )`},
+	{name: "StringConcat", value: `"hel" + "lo"`},
 }
 
 func TestEvaluatorCases(t *testing.T) {

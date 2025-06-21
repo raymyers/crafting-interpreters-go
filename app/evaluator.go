@@ -32,6 +32,11 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) interface{} {
 				return leftNum + rightNum
 			}
 		}
+		if leftStr, ok := left.(string); ok {
+			if rightStr, ok := right.(string); ok {
+				return leftStr + rightStr
+			}
+		}
 		return nil
 	case MINUS:
 		if leftNum, ok := left.(float64); ok {
