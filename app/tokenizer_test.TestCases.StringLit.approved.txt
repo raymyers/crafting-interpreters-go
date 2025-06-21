@@ -1,0 +1,4 @@
+LEFT_PAREN ( null
+STRING "Hello World" Hello World
+RIGHT_PAREN ) null
+EOF  null

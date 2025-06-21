@@ -26,6 +26,7 @@ var ParameterizedTestcases = []TestCaseParameters{
 	{name: "SlashComment", value: "(/)//()"},
 	{name: "TabsSpaces", value: "( ){\t}"},
 	{name: "MultiLine", value: "(\n)"},
+	{name: "StringLit", value: `( "Hello World" )`},
 }
 
 func TestCases(t *testing.T) {

@@ -27,6 +27,7 @@ const (
 	GREATER
 	GREATER_EQUAL
 	SLASH
+	STRING
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -50,6 +51,7 @@ var tokenTypeName = map[TokenType]string{
 	GREATER:       "GREATER",
 	GREATER_EQUAL: "GREATER_EQUAL",
 	SLASH:         "SLASH",
+	STRING:        "STRING",
 }
 
 type Token struct {

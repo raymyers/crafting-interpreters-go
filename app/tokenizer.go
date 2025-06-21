@@ -149,6 +149,34 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			// Skip
 		case '\n':
 			lineNo++
+		case '"':
+			// String literal
+			var stringValue strings.Builder
+			for {
+				b, err := reader.ReadByte()
+				if err != nil {
+					if err == io.EOF {
+						_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated string.\n", lineNo)
+						if err != nil {
+							return result, err
+						}
+						errors = append(errors, "unterminated string")
+						break
+					}
+					return result, err
+				}
+				
+				if b == '"' {
+					// End of string
+					result = append(result, Token{STRING, fmt.Sprintf("\"%s\"", stringValue.String()), stringValue.String()})
+					break
+				} else if b == '\n' {
+					lineNo++
+					stringValue.WriteByte(b)
+				} else {
+					stringValue.WriteByte(b)
+				}
+			}
 		default:
 			_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
 			if err != nil {
