@@ -27,6 +27,7 @@ func TokenizeString(text string) ([]Token, error) {
 func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 	result := make([]Token, 0)
 	var errors []string
+	var lineNo uint = 1
 	for {
 		b, err := reader.ReadByte()
 		if err != nil {
@@ -146,9 +147,9 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 		case '\t':
 			// Skip
 		case '\n':
-			// Skip
+			lineNo++
 		default:
-			_, err := fmt.Fprintf(os.Stderr, "[line 1] Error: Unexpected character: %c\n", b)
+			_, err := fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character: %c\n", lineNo, b)
 			if err != nil {
 				return result, err
 			}
