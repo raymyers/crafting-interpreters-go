@@ -21,6 +21,32 @@ func NewScope(parent *Scope) *Scope {
 	}
 }
 
+// NewDefaultScope creates a new scope with default built-in effects
+func NewDefaultScope(output io.Writer) *Scope {
+	scope := NewScope(nil)
+
+	// Define the Log effect
+	logEffect := LambdaValue{
+		Parameters: []string{"value"},
+		Body:       nil, // Builtin function, no body
+		Closure:    nil,
+		Builtin: func(args []Value) Value {
+			if len(args) != 1 {
+				return ErrorValue{Message: "Log expects exactly 1 argument", Line: 0}
+			}
+
+			// Print the value
+			fmt.Fprintf(output, "%s\n", formatValue(args[0]))
+
+			// Return empty record (unit value)
+			return RecordValue{Fields: make(map[string]Value)}
+		},
+	}
+
+	scope.define("Log", logEffect)
+	return scope
+}
+
 // lookup searches for a variable in this scope and parent scopes
 func (s *Scope) lookup(name string) (Value, bool) {
 	if value, exists := s.envMap[name]; exists {
@@ -794,11 +820,80 @@ func (e *Evaluator) VisitMatch(expr *Match) Value {
 }
 
 func (e *Evaluator) VisitPerform(expr *Perform) Value {
-	return ErrorValue{Message: "Perform not implemented", Line: expr.Line}
+	// Look up the effect in the current scope
+	effectValue, ok := e.scope.lookup(expr.Effect)
+	if !ok {
+		return ErrorValue{Message: fmt.Sprintf("Undefined effect '%s'", expr.Effect), Line: expr.Line}
+	}
+
+	// The effect should be a lambda function
+	lambda, ok := effectValue.(LambdaValue)
+	if !ok {
+		return ErrorValue{Message: fmt.Sprintf("'%s' is not an effect function", expr.Effect), Line: expr.Line}
+	}
+
+	// Check argument count
+	if len(expr.Arguments) != len(lambda.Parameters) {
+		return ErrorValue{
+			Message: fmt.Sprintf("Effect '%s' expects %d arguments but got %d",
+				expr.Effect, len(lambda.Parameters), len(expr.Arguments)),
+			Line: expr.Line,
+		}
+	}
+
+	// Evaluate arguments
+	argValues := make([]Value, len(expr.Arguments))
+	for i, arg := range expr.Arguments {
+		argValue := e.Evaluate(arg)
+		if _, isError := argValue.(ErrorValue); isError {
+			return argValue
+		}
+		argValues[i] = argValue
+	}
+
+	// If it's a builtin effect, call it
+	if lambda.Builtin != nil {
+		return lambda.Builtin(argValues)
+	}
+
+	// Otherwise, execute the lambda with the arguments
+	previousScope := e.scope
+	e.scope = NewScope(lambda.Closure)
+
+	// Bind parameters to arguments
+	for i, paramName := range lambda.Parameters {
+		e.scope.define(paramName, argValues[i])
+	}
+
+	// Execute lambda body
+	result := e.Evaluate(lambda.Body)
+
+	// Restore previous scope
+	e.scope = previousScope
+	return result
 }
 
 func (e *Evaluator) VisitHandle(expr *Handle) Value {
-	return ErrorValue{Message: "Handle not implemented", Line: expr.Line}
+	// Evaluate the handler expression
+	handlerValue := e.Evaluate(expr.Handler)
+	if _, isError := handlerValue.(ErrorValue); isError {
+		return handlerValue
+	}
+
+	// Create a new scope with the effect temporarily overridden
+	previousScope := e.scope
+	e.scope = NewScope(previousScope)
+
+	// Define the effect in the new scope to override any existing definition
+	e.scope.define(expr.Effect, handlerValue)
+
+	// Evaluate the fallback expression with the new effect handler
+	result := e.Evaluate(expr.Fallback)
+
+	// Restore the previous scope
+	e.scope = previousScope
+
+	return result
 }
 
 func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {

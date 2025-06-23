@@ -20,7 +20,7 @@ func evaluateToString(input string, output *bytes.Buffer) string {
 		return "Parse error: " + err.Error()
 	}
 
-	evaluator := NewEvaluator(NewScope(nil), output)
+	evaluator := NewEvaluator(NewDefaultScope(output), output)
 	result := evaluator.Evaluate(expr)
 	if ev, isErrVal := result.(ErrorValue); isErrVal {
 		return "Evaluation error: " + ev.Message

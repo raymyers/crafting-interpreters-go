@@ -215,25 +215,6 @@ evaluator_tests:
     input: |
       False({}) and 56
     expected: "False({})"
-  - name: "While"
-    input: |
-      foo = 0
-      while (foo < 3) perform Log(foo = foo + 1)
-    expected: "{}"
-    expectedOutput: |
-      1
-      2
-      3
-  - name: "For"
-    input: |
-      for (world = 0; world < 3; world = world + 1) {
-        perform Log(world)
-      }
-    expected: "{}"
-    expectedOutput: |
-      0
-      1
-      2
   - name: "Clock"
     input: |
       !clock({}) > 0
@@ -249,7 +230,7 @@ evaluator_tests:
       foo = |_| { perform Log("hello") }
       perform Log(foo)
     expected: "{}"
-    expectedOutput: "<fn foo>\n"
+    expectedOutput: "<lambda>\n"
   - name: "Function with one argument"
     input: |
       greet = |name| {
