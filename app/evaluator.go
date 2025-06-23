@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"time"
 )
 
@@ -428,6 +429,40 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 			// Restore previous scope
 			e.scope = previousScope
 			return result
+		} else if lv, ok := lookup.(LambdaValue); ok {
+			// Handle lambda function call
+			if len(lv.Parameters) != len(expr.Arguments) {
+				return ErrorValue{
+					Message: fmt.Sprintf("Expected %d arguments but got %d", len(lv.Parameters), len(expr.Arguments)),
+					Line:    expr.Line,
+				}
+			}
+
+			// Evaluate arguments
+			argValues := make([]Value, len(expr.Arguments))
+			for i, arg := range expr.Arguments {
+				argValue := e.Evaluate(arg)
+				if _, isError := argValue.(ErrorValue); isError {
+					return argValue
+				}
+				argValues[i] = argValue
+			}
+
+			// Create new scope for lambda execution (based on closure)
+			previousScope := e.scope
+			e.scope = NewScope(lv.Closure)
+
+			// Bind parameters to arguments in the new scope
+			for i, paramName := range lv.Parameters {
+				e.scope.define(paramName, argValues[i])
+			}
+
+			// Execute lambda body
+			result := e.Evaluate(lv.Body)
+
+			// Restore previous scope
+			e.scope = previousScope
+			return result
 		} else {
 			return ErrorValue{Message: "cannot call a non-function", Line: expr.Line}
 		}
@@ -487,7 +522,15 @@ func isEqual(left, right Value) bool {
 
 // Placeholder implementations for new EYG visitor methods
 func (e *Evaluator) VisitRecord(expr *Record) Value {
-	return ErrorValue{Message: "Record not implemented", Line: expr.Line}
+	fields := make(map[string]Value)
+	for _, field := range expr.Fields {
+		value := e.Evaluate(field.Value)
+		if _, ev := value.(ErrorValue); ev {
+			return value
+		}
+		fields[field.Name] = value
+	}
+	return RecordValue{Fields: fields}
 }
 
 func (e *Evaluator) VisitEmptyRecord(expr *EmptyRecord) Value {
@@ -495,15 +538,137 @@ func (e *Evaluator) VisitEmptyRecord(expr *EmptyRecord) Value {
 }
 
 func (e *Evaluator) VisitList(expr *List) Value {
-	return ErrorValue{Message: "List not implemented", Line: expr.Line}
+	var elements []Value
+	for _, element := range expr.Elements {
+		if spread, ok := element.(*Spread); ok {
+			// Handle spread operator
+			spreadValue := e.Evaluate(spread.Expression)
+			if _, ev := spreadValue.(ErrorValue); ev {
+				return spreadValue
+			}
+			if list, ok := spreadValue.(ListValue); ok {
+				elements = append(elements, list.Elements...)
+			} else {
+				return ErrorValue{Message: "Can only spread lists", Line: spread.Line}
+			}
+		} else {
+			value := e.Evaluate(element)
+			if _, ev := value.(ErrorValue); ev {
+				return value
+			}
+			elements = append(elements, value)
+		}
+	}
+	return ListValue{Elements: elements}
 }
 
 func (e *Evaluator) VisitAccess(expr *Access) Value {
-	return ErrorValue{Message: "Access not implemented", Line: expr.Line}
+	object := e.Evaluate(expr.Object)
+	if _, ev := object.(ErrorValue); ev {
+		return object
+	}
+	
+	if record, ok := object.(RecordValue); ok {
+		if value, exists := record.Fields[expr.Name]; exists {
+			return value
+		}
+		return ErrorValue{Message: "Undefined property '" + expr.Name + "'", Line: expr.Line}
+	}
+	
+	return ErrorValue{Message: "Only records have properties", Line: expr.Line}
 }
 
 func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
-	return ErrorValue{Message: "Builtin not implemented", Line: expr.Line}
+	switch expr.Name {
+	case "list_fold":
+		if len(expr.Arguments) != 3 {
+			return ErrorValue{Message: "list_fold expects 3 arguments", Line: expr.Line}
+		}
+		
+		// Evaluate list
+		listValue := e.Evaluate(expr.Arguments[0])
+		if _, ev := listValue.(ErrorValue); ev {
+			return listValue
+		}
+		list, ok := listValue.(ListValue)
+		if !ok {
+			return ErrorValue{Message: "First argument to list_fold must be a list", Line: expr.Line}
+		}
+		
+		// Evaluate initial value
+		accumulator := e.Evaluate(expr.Arguments[1])
+		if _, ev := accumulator.(ErrorValue); ev {
+			return accumulator
+		}
+		
+		// Evaluate function
+		funcValue := e.Evaluate(expr.Arguments[2])
+		if _, ev := funcValue.(ErrorValue); ev {
+			return funcValue
+		}
+		lambda, ok := funcValue.(LambdaValue)
+		if !ok {
+			return ErrorValue{Message: "Third argument to list_fold must be a function", Line: expr.Line}
+		}
+		
+		// Fold over the list
+		for _, element := range list.Elements {
+			// Call lambda with accumulator and element
+			previousScope := e.scope
+			e.scope = NewScope(lambda.Closure)
+			
+			// Bind parameters
+			if len(lambda.Parameters) != 2 {
+				e.scope = previousScope
+				return ErrorValue{Message: "Fold function must take exactly 2 parameters", Line: expr.Line}
+			}
+			e.scope.define(lambda.Parameters[0], accumulator)
+			e.scope.define(lambda.Parameters[1], element)
+			
+			// Execute lambda body
+			result := e.Evaluate(lambda.Body)
+			e.scope = previousScope
+			
+			if _, ev := result.(ErrorValue); ev {
+				return result
+			}
+			accumulator = result
+		}
+		
+		return accumulator
+		
+	case "int_parse":
+		if len(expr.Arguments) != 1 {
+			return ErrorValue{Message: "int_parse expects 1 argument", Line: expr.Line}
+		}
+		
+		// Evaluate string argument
+		strValue := e.Evaluate(expr.Arguments[0])
+		if _, ev := strValue.(ErrorValue); ev {
+			return strValue
+		}
+		str, ok := strValue.(StringValue)
+		if !ok {
+			return ErrorValue{Message: "int_parse expects a string argument", Line: expr.Line}
+		}
+		
+		// Parse the string to integer
+		if val, err := strconv.ParseFloat(str.Val, 64); err == nil {
+			return NumberValue{Val: val}
+		} else {
+			return ErrorValue{Message: "Cannot parse string as integer", Line: expr.Line}
+		}
+		
+	case "clock":
+		if len(expr.Arguments) != 0 {
+			return ErrorValue{Message: "clock expects no arguments", Line: expr.Line}
+		}
+		epochSeconds := float64(time.Now().Unix())
+		return NumberValue{Val: epochSeconds}
+		
+	default:
+		return ErrorValue{Message: fmt.Sprintf("Unknown builtin function: %s", expr.Name), Line: expr.Line}
+	}
 }
 
 func (e *Evaluator) VisitUnion(expr *Union) Value {
@@ -515,7 +680,11 @@ func (e *Evaluator) VisitUnion(expr *Union) Value {
 }
 
 func (e *Evaluator) VisitLambda(expr *Lambda) Value {
-	return ErrorValue{Message: "Lambda not implemented", Line: expr.Line}
+	return LambdaValue{
+		Parameters: expr.Parameters,
+		Body:       expr.Body,
+		Closure:    e.scope,
+	}
 }
 
 func (e *Evaluator) VisitMatch(expr *Match) Value {
@@ -539,7 +708,9 @@ func (e *Evaluator) VisitThunk(expr *Thunk) Value {
 }
 
 func (e *Evaluator) VisitSpread(expr *Spread) Value {
-	return ErrorValue{Message: "Spread not implemented", Line: expr.Line}
+	// Spread is handled in the context where it's used (e.g., List, Record)
+	// This should not be called directly
+	return ErrorValue{Message: "Spread can only be used in lists or records", Line: expr.Line}
 }
 
 func (e *Evaluator) VisitDestructure(expr *Destructure) Value {

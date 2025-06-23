@@ -51,6 +51,26 @@ type UnionValue struct {
 
 func (UnionValue) implValue() {}
 
+type RecordValue struct {
+	Fields map[string]Value
+}
+
+func (RecordValue) implValue() {}
+
+type ListValue struct {
+	Elements []Value
+}
+
+func (ListValue) implValue() {}
+
+type LambdaValue struct {
+	Parameters []string
+	Body       Expr
+	Closure    *Scope
+}
+
+func (LambdaValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
 	Accept(visitor ExprVisitor) Value

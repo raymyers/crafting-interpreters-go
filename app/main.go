@@ -131,6 +131,36 @@ func formatValue(value Value) string {
 			return fmt.Sprintf("%s({})", v.Constructor)
 		}
 		return fmt.Sprintf("%s(%s)", v.Constructor, formatValue(v.Value))
+	case RecordValue:
+		if len(v.Fields) == 0 {
+			return "{}"
+		}
+		result := "{"
+		first := true
+		for key, value := range v.Fields {
+			if !first {
+				result += ", "
+			}
+			result += fmt.Sprintf("%s: %s", key, formatValue(value))
+			first = false
+		}
+		result += "}"
+		return result
+	case ListValue:
+		if len(v.Elements) == 0 {
+			return "[]"
+		}
+		result := "["
+		for i, element := range v.Elements {
+			if i > 0 {
+				result += ", "
+			}
+			result += formatValue(element)
+		}
+		result += "]"
+		return result
+	case LambdaValue:
+		return "<lambda>"
 	case FunValue:
 		return fmt.Sprintf("<fn %s>", v.Val.Name)
 	default:
