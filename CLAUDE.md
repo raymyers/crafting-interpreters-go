@@ -20,6 +20,13 @@ This is a Go implementation of the Lox interpreter following the "Crafting Inter
 - `make test-coverage` - Run tests with coverage report
 - `go test ./app -v -run TestEvaluatorCases/GroupedString` - Run a specific test case
 
+**Important**: Test cases are defined in YAML files:
+- `tokenizer_tests.yaml` - Tests for lexical analysis
+- `parser_tests.yaml` - Tests for parsing and AST generation
+- `evaluator_tests.yaml` - Tests for expression evaluation and runtime behavior
+
+When adding new features, always add corresponding test cases to the appropriate YAML file rather than creating manual test files. The test framework automatically reads these YAML files and runs the test cases.
+
 ### Code Quality
 - `make fmt` - Format Go code
 - `make vet` - Run Go vet for static analysis
