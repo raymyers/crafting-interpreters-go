@@ -88,6 +88,16 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 		}
 
 	}
+	if expr.Operator.Type == OR {
+		left := e.Evaluate(expr.Right)
+		if _, ev := left.(ErrorValue); ev {
+			return left
+		}
+		if isTruthy(left) {
+			return left
+		}
+		return e.Evaluate(expr.Right)
+	}
 	left := e.Evaluate(expr.Left)
 	if _, ev := left.(ErrorValue); ev {
 		return left
@@ -263,13 +273,13 @@ func (e *Evaluator) VisitIfStatement(expr *IfStatement) Value {
 	if _, isError := conditionValue.(ErrorValue); isError {
 		return conditionValue
 	}
-	
+
 	if isTruthy(conditionValue) {
 		return e.Evaluate(expr.ThenBranch)
 	} else if expr.ElseBranch != nil {
 		return e.Evaluate(expr.ElseBranch)
 	}
-	
+
 	return NilValue{}
 }
 

@@ -140,3 +140,7 @@ parser_tests:
       if (true) 1;
       else 2;
     expected: '(if true 1.0 2.0)'
+  - name: "Or"
+    input: |
+      print false or false or true;
+    expected: '(print (or (or false false) true))'

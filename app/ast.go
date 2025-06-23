@@ -152,10 +152,10 @@ func (b *Block) Accept(visitor ExprVisitor) Value {
 
 // IfStatement represents an if statement (e.g., if (condition) { then })
 type IfStatement struct {
-	Condition Expr
+	Condition  Expr
 	ThenBranch Expr
 	ElseBranch Expr
-	Line      uint
+	Line       uint
 }
 
 func (i *IfStatement) Accept(visitor ExprVisitor) Value {

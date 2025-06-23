@@ -197,3 +197,8 @@ evaluator_tests:
       }
       a
     expected: "1"
+  - name: "Or"
+    input: |
+      false or false or true;
+    expected: "true"
+
