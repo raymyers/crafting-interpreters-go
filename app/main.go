@@ -20,7 +20,9 @@ func main() {
 	case "parse":
 		handleParse(filename)
 	case "evaluate":
-		handleEvaluate(filename)
+		handleEvaluate(filename, true)
+	case "run":
+		handleEvaluate(filename, false)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
 		os.Exit(1)
@@ -63,7 +65,7 @@ func handleParse(filename string) {
 	fmt.Println(result)
 }
 
-func handleEvaluate(filename string) {
+func handleEvaluate(filename string, printResult bool) {
 	// Tokenize the file first
 	tokens, tokenizeErr := TokenizeFile(filename)
 	if tokenizeErr != nil {
@@ -88,7 +90,9 @@ func handleEvaluate(filename string) {
 		fmt.Fprintf(os.Stderr, "%v\n", errorText)
 		os.Exit(70)
 	default:
-		fmt.Println(formatValue(result))
+		if printResult {
+			fmt.Println(formatValue(result))
+		}
 	}
 
 }
