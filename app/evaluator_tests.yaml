@@ -201,4 +201,7 @@ evaluator_tests:
     input: |
       false or false or true;
     expected: "true"
-
+  - name: "OrFirstTruthy"
+    input: |
+      27 or true
+    expected: "27"

@@ -89,7 +89,7 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 
 	}
 	if expr.Operator.Type == OR {
-		left := e.Evaluate(expr.Right)
+		left := e.Evaluate(expr.Left)
 		if _, ev := left.(ErrorValue); ev {
 			return left
 		}
