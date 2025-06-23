@@ -101,6 +101,12 @@ func (ap *AstPrinter) VisitForStatement(expr *ForStatement) Value {
 	return StringValue{Val: ap.parenthesize("for", expr.Initializer, expr.Condition, expr.Increment, expr.Body)}
 }
 
+// VisitCallExpr prints function call expressions as (call callee arg1 arg2 ...)
+func (ap *AstPrinter) VisitCallExpr(expr *Call) Value {
+	args := append([]Expr{expr.Callee}, expr.Arguments...)
+	return StringValue{Val: ap.parenthesize("call", args...)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder

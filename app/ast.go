@@ -57,6 +57,7 @@ type ExprVisitor interface {
 	VisitIfStatement(expr *IfStatement) Value
 	VisitWhileStatement(expr *WhileStatement) Value
 	VisitForStatement(expr *ForStatement) Value
+	VisitCallExpr(expr *Call) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -185,4 +186,15 @@ type ForStatement struct {
 
 func (w *ForStatement) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitForStatement(w)
+}
+
+// Call represents a function call expression (e.g., foo(1, 2, 3))
+type Call struct {
+	Callee    Expr
+	Arguments []Expr
+	Line      uint
+}
+
+func (c *Call) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitCallExpr(c)
 }

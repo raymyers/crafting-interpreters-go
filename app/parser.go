@@ -124,7 +124,7 @@ func (p *Parser) factor() (Expr, error) {
 	return expr, nil
 }
 
-// unary → ( "!" | "-" ) unary | primary
+// unary → ( "!" | "-" ) unary | call
 func (p *Parser) unary() (Expr, error) {
 	if p.match(BANG, MINUS) {
 		operator := p.previous()
@@ -135,7 +135,58 @@ func (p *Parser) unary() (Expr, error) {
 		return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+// call → primary ( "(" arguments? ")" )*
+func (p *Parser) call() (Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if p.match(LPAR) {
+			expr, err = p.finishCall(expr)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			break
+		}
+	}
+
+	return expr, nil
+}
+
+// finishCall parses the arguments and creates a Call expression
+func (p *Parser) finishCall(callee Expr) (Expr, error) {
+	var arguments []Expr
+	
+	if !p.check(RPAR) {
+		for {
+			arg, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			arguments = append(arguments, arg)
+			
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+	
+	paren, err := p.consume(RPAR, "Expect ')' after arguments.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Call{
+		Callee:    callee,
+		Arguments: arguments,
+		Line:      paren.Line,
+	}, nil
 }
 
 // statements → expression (";"? expression)* | ";"

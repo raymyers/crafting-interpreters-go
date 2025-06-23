@@ -352,6 +352,11 @@ func (e *Evaluator) VisitForStatement(expr *ForStatement) Value {
 	return NilValue{}
 }
 
+func (e *Evaluator) VisitCallExpr(expr *Call) Value {
+	// For now, we'll just return an error since we don't have functions yet
+	return ErrorValue{Message: "Function calls not yet implemented", Line: expr.Line}
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

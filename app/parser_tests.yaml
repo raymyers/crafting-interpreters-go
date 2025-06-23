@@ -1,4 +1,23 @@
 parser_tests:
+  - name: "FunctionCallNoArgs"
+    input: "foo()"
+    expected: "(call foo)"
+
+  - name: "FunctionCallOneArg"
+    input: "foo(42)"
+    expected: "(call foo 42.0)"
+
+  - name: "FunctionCallMultipleArgs"
+    input: "foo(1, 2, 3)"
+    expected: "(call foo 1.0 2.0 3.0)"
+
+  - name: "FunctionCallWithExpressions"
+    input: "foo(1 + 2, bar)"
+    expected: "(call foo (+ 1.0 2.0) bar)"
+
+  - name: "ChainedFunctionCalls"
+    input: "foo()(bar)"
+    expected: "(call (call foo) bar)"
   - name: "Number"
     input: "42"
     expected: "42.0"
