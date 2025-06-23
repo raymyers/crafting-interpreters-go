@@ -143,6 +143,14 @@ func (p *Parser) unary() (Expr, error) {
 		}
 		return &Thunk{Body: body, Line: line}, nil
 	}
+	if p.match(NOT) {
+		operator := p.previous()
+		right, err := p.unary()
+		if err != nil {
+			return nil, err
+		}
+		return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
+	}
 	if p.match(BANG) {
 		operator := p.previous()
 		// Check if this is a builtin call (!identifier(...))

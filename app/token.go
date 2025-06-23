@@ -58,6 +58,7 @@ const (
 	MATCH
 	PERFORM
 	HANDLE
+	NOT
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -112,6 +113,7 @@ var tokenTypeName = map[TokenType]string{
 	MATCH:         "MATCH",
 	PERFORM:       "PERFORM",
 	HANDLE:        "HANDLE",
+	NOT:           "NOT",
 }
 
 type Token struct {

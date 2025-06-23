@@ -384,6 +384,8 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return PERFORM
 	case "handle":
 		return HANDLE
+	case "not":
+		return NOT
 	default:
 		return IDENTIFIER
 	}

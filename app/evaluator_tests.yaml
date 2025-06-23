@@ -64,16 +64,16 @@ evaluator_tests:
     expected: "-73"
 
   - name: "LogicalNot"
-    input: "!True({})"
+    input: "not True({})"
     expected: "False({})"
 
   - name: "LogicalNotNumber"
-    input: "!10.40"
+    input: "not 10.40"
     expected: "False({})"
 
   - name: "LogicalNotGrouped"
-    input: "!(!False({}))"
-    expected: "True({})"
+    input: "not (not False({}))"
+    expected: "False({})"
 
   - name: "Grouping"
     input: "(2 + 3)"

@@ -269,6 +269,8 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 		return ErrorValue{Message: "Operand must be a number", Line: expr.Line}
 	case BANG:
 		return boolToUnion(!isTruthy(right))
+	case NOT:
+		return boolToUnion(!isTruthy(right))
 	}
 
 	return ErrorValue{Message: "Unknown unary operator", Line: expr.Line}
