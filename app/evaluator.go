@@ -23,7 +23,7 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 	left := e.Evaluate(expr.Left)
 	right := e.Evaluate(expr.Right)
 	if _, ev := left.(ErrorValue); ev {
-		return right
+		return left
 	}
 	if _, ev := right.(ErrorValue); ev {
 		return right
@@ -34,6 +34,7 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 			if rightNum, ok := right.(NumberValue); ok {
 				return NumberValue{Val: leftNum.Val + rightNum.Val}
 			}
+
 		}
 		if leftStr, ok := left.(StringValue); ok {
 			if rightStr, ok := right.(StringValue); ok {

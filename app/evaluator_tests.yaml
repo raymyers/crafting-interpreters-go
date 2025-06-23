@@ -130,3 +130,7 @@ evaluator_tests:
   - name: "Print"
     input: 'print 5'
     expected: "nil"
+
+  - name: "AddNumbersToString"
+    input: '4 + "a" + 7'
+    expected: "Evaluation error: Operands must be two numbers or two strings"
