@@ -461,3 +461,64 @@ func isEqual(left, right Value) bool {
 	}
 	return false
 }
+
+// Placeholder implementations for new EYG visitor methods
+func (e *Evaluator) VisitRecord(expr *Record) Value {
+	return ErrorValue{Message: "Record not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitEmptyRecord(expr *EmptyRecord) Value {
+	return ErrorValue{Message: "EmptyRecord not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitList(expr *List) Value {
+	return ErrorValue{Message: "List not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitAccess(expr *Access) Value {
+	return ErrorValue{Message: "Access not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
+	return ErrorValue{Message: "Builtin not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitUnion(expr *Union) Value {
+	return ErrorValue{Message: "Union not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitLambda(expr *Lambda) Value {
+	return ErrorValue{Message: "Lambda not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitMatch(expr *Match) Value {
+	return ErrorValue{Message: "Match not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitPerform(expr *Perform) Value {
+	return ErrorValue{Message: "Perform not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitHandle(expr *Handle) Value {
+	return ErrorValue{Message: "Handle not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
+	return ErrorValue{Message: "NamedRef not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitThunk(expr *Thunk) Value {
+	return ErrorValue{Message: "Thunk not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitSpread(expr *Spread) Value {
+	return ErrorValue{Message: "Spread not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
+	return ErrorValue{Message: "Destructure not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitSeq(expr *Seq) Value {
+	return ErrorValue{Message: "Seq not implemented", Line: expr.Line}
+}

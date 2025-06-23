@@ -65,6 +65,21 @@ type ExprVisitor interface {
 	VisitForStatement(expr *ForStatement) Value
 	VisitCallExpr(expr *Call) Value
 	VisitFun(expr *Fun) Value
+	VisitRecord(expr *Record) Value
+	VisitEmptyRecord(expr *EmptyRecord) Value
+	VisitList(expr *List) Value
+	VisitAccess(expr *Access) Value
+	VisitBuiltin(expr *Builtin) Value
+	VisitUnion(expr *Union) Value
+	VisitLambda(expr *Lambda) Value
+	VisitMatch(expr *Match) Value
+	VisitPerform(expr *Perform) Value
+	VisitHandle(expr *Handle) Value
+	VisitNamedRef(expr *NamedRef) Value
+	VisitThunk(expr *Thunk) Value
+	VisitSpread(expr *Spread) Value
+	VisitDestructure(expr *Destructure) Value
+	VisitSeq(expr *Seq) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -215,4 +230,173 @@ type Fun struct {
 
 func (c *Fun) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitFun(c)
+}
+
+// Record represents a record with fields (e.g., {name: "Alice", age: 30})
+type Record struct {
+	Fields []RecordField
+	Line   uint
+}
+
+type RecordField struct {
+	Name  string
+	Value Expr
+}
+
+func (r *Record) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitRecord(r)
+}
+
+// EmptyRecord represents an empty record {}
+type EmptyRecord struct {
+	Line uint
+}
+
+func (e *EmptyRecord) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitEmptyRecord(e)
+}
+
+// List represents a list [1, 2, 3]
+type List struct {
+	Elements []Expr
+	Line     uint
+}
+
+func (l *List) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitList(l)
+}
+
+// Access represents record field access (e.g., alice.name)
+type Access struct {
+	Object Expr
+	Name   string
+	Line   uint
+}
+
+func (a *Access) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitAccess(a)
+}
+
+// Builtin represents a builtin function call (e.g., !int_add(1, 2))
+type Builtin struct {
+	Name      string
+	Arguments []Expr
+	Line      uint
+}
+
+func (b *Builtin) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitBuiltin(b)
+}
+
+// Union represents a union type constructor (e.g., Cat("felix"))
+type Union struct {
+	Constructor string
+	Value       Expr
+	Line        uint
+}
+
+func (u *Union) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitUnion(u)
+}
+
+// Lambda represents a lambda expression (e.g., |x, y| { x + y })
+type Lambda struct {
+	Parameters []string
+	Body       Expr
+	Line       uint
+}
+
+func (l *Lambda) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitLambda(l)
+}
+
+// Match represents a match expression
+type Match struct {
+	Value Expr
+	Cases []MatchCase
+	Line  uint
+}
+
+type MatchCase struct {
+	Pattern Expr
+	Body    Expr
+}
+
+func (m *Match) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitMatch(m)
+}
+
+// Perform represents an effect (e.g., perform Log("hello"))
+type Perform struct {
+	Effect    string
+	Arguments []Expr
+	Line      uint
+}
+
+func (p *Perform) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitPerform(p)
+}
+
+// Handle represents a handle expression
+type Handle struct {
+	Effect   string
+	Handler  Expr
+	Fallback Expr
+	Line     uint
+}
+
+func (h *Handle) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitHandle(h)
+}
+
+// NamedRef represents a named reference (e.g., @std:1)
+type NamedRef struct {
+	Module string
+	Index  int
+	Line   uint
+}
+
+func (n *NamedRef) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitNamedRef(n)
+}
+
+// Thunk represents a thunk (e.g., || {})
+type Thunk struct {
+	Body Expr
+	Line uint
+}
+
+func (t *Thunk) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitThunk(t)
+}
+
+// Spread represents a spread operator (e.g., ..items)
+type Spread struct {
+	Expression Expr
+	Line       uint
+}
+
+func (s *Spread) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitSpread(s)
+}
+
+// Destructure represents destructuring assignment
+type Destructure struct {
+	Fields []RecordField
+	Line   uint
+}
+
+func (d *Destructure) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitDestructure(d)
+}
+
+// Seq represents a sequence of expressions
+type Seq struct {
+	Left  Expr
+	Right Expr
+	Line  uint
+}
+
+func (s *Seq) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitSeq(s)
 }

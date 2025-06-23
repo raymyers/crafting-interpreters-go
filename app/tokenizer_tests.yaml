@@ -54,10 +54,9 @@ tokenizer_tests:
       EOF  null
 
   - name: "HashComment"
-    input: "(#)# comment"
+    input: "()# comment"
     expected: |
       LEFT_PAREN ( null
-      HASH # null
       RIGHT_PAREN ) null
       EOF  null
 

@@ -126,7 +126,62 @@ func (p *Parser) factor() (Expr, error) {
 
 // unary → ( "!" | "-" ) unary | call
 func (p *Parser) unary() (Expr, error) {
-	if p.match(BANG, MINUS) {
+	if p.match(BANG) {
+		operator := p.previous()
+		// Check if this is a builtin call (!identifier(...))
+		if p.check(IDENTIFIER) {
+			name := p.advance().Lexeme
+			if p.match(LPAR) {
+				// Check if this looks like a builtin (lowercase identifier)
+				if len(name) > 0 && name[0] >= 'a' && name[0] <= 'z' {
+					// This is a builtin call
+					var arguments []Expr
+					if !p.check(RPAR) {
+						for {
+							arg, err := p.expression()
+							if err != nil {
+								return nil, err
+							}
+							arguments = append(arguments, arg)
+							if !p.match(COMMA) {
+								break
+							}
+						}
+					}
+					_, err := p.consume(RPAR, "Expect ')' after builtin arguments.")
+					if err != nil {
+						return nil, err
+					}
+					return &Builtin{Name: name, Arguments: arguments, Line: operator.Line}, nil
+				} else {
+					// Not a builtin call (uppercase identifier), treat as unary ! followed by call
+					p.current-- // back up to re-parse the (
+					p.current-- // back up to re-parse the identifier
+					right, err := p.unary()
+					if err != nil {
+						return nil, err
+					}
+					return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
+				}
+			} else {
+				// Not a builtin call, treat as unary ! followed by identifier
+				p.current-- // back up to re-parse the identifier
+				right, err := p.unary()
+				if err != nil {
+					return nil, err
+				}
+				return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
+			}
+		} else {
+			right, err := p.unary()
+			if err != nil {
+				return nil, err
+			}
+			return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
+		}
+	}
+	
+	if p.match(MINUS) {
 		operator := p.previous()
 		right, err := p.unary()
 		if err != nil {
@@ -138,7 +193,7 @@ func (p *Parser) unary() (Expr, error) {
 	return p.call()
 }
 
-// call → primary ( "(" arguments? ")" )*
+// call → primary ( "(" arguments? ")" | "." IDENTIFIER )*
 func (p *Parser) call() (Expr, error) {
 	expr, err := p.primary()
 	if err != nil {
@@ -151,6 +206,12 @@ func (p *Parser) call() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
+		} else if p.match(DOT) {
+			name, err := p.consume(IDENTIFIER, "Expect property name after '.'.")
+			if err != nil {
+				return nil, err
+			}
+			expr = &Access{Object: expr, Name: name.Lexeme, Line: name.Line}
 		} else {
 			break
 		}
@@ -180,6 +241,22 @@ func (p *Parser) finishCall(callee Expr) (Expr, error) {
 	paren, err := p.consume(RPAR, "Expect ')' after arguments.")
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if this should be a union constructor
+	if variable, ok := callee.(*Variable); ok {
+		name := variable.Name.Lexeme
+		// Check if this looks like a union constructor (starts with uppercase)
+		if len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z' {
+			// If there's exactly one argument, treat as union constructor
+			if len(arguments) == 1 {
+				return &Union{Constructor: name, Value: arguments[0], Line: paren.Line}, nil
+			}
+			// If there are no arguments, treat as union with empty record
+			if len(arguments) == 0 {
+				return &Union{Constructor: name, Value: &EmptyRecord{Line: paren.Line}, Line: paren.Line}, nil
+			}
+		}
 	}
 
 	return &Call{
@@ -303,8 +380,13 @@ func (p *Parser) primary() (Expr, error) {
 	}
 
 	if p.match(LBRAC) {
-		return p.blockStatement()
+		return p.recordOrBlock()
 	}
+	
+	if p.match(LEFT_BRACKET) {
+		return p.listExpression()
+	}
+	
 	if p.match(FUN) {
 		return p.funStatement()
 	}
@@ -548,4 +630,107 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 		return p.advance(), nil
 	}
 	return Token{}, fmt.Errorf("%s", message)
+}
+
+// recordOrBlock determines if {} is an empty record or a block based on content
+func (p *Parser) recordOrBlock() (Expr, error) {
+	line := p.previous().Line
+	
+	// Check if it's empty {}
+	if p.check(RBRAC) {
+		p.advance() // consume }
+		return &EmptyRecord{Line: line}, nil
+	}
+	
+	// Look ahead to see if this looks like a record (has : after identifier)
+	saved := p.current
+	isRecord := false
+	
+	if p.check(IDENTIFIER) {
+		p.advance()
+		if p.check(COLON) {
+			isRecord = true
+		}
+	}
+	
+	// Restore position
+	p.current = saved
+	
+	if isRecord {
+		return p.recordStatement()
+	} else {
+		return p.blockStatement()
+	}
+}
+
+// recordStatement → "{" (identifier ":" expression ("," identifier ":" expression)*)? "}"
+func (p *Parser) recordStatement() (Expr, error) {
+	line := p.previous().Line
+	var fields []RecordField
+	
+	for !p.check(RBRAC) && !p.isAtEnd() {
+		name, err := p.consume(IDENTIFIER, "Expect field name.")
+		if err != nil {
+			return nil, err
+		}
+		
+		_, err = p.consume(COLON, "Expect ':' after field name.")
+		if err != nil {
+			return nil, err
+		}
+		
+		value, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		
+		fields = append(fields, RecordField{Name: name.Lexeme, Value: value})
+		
+		if !p.match(COMMA) {
+			break
+		}
+	}
+	
+	_, err := p.consume(RBRAC, "Expect '}' after record.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Record{Fields: fields, Line: line}, nil
+}
+
+// listExpression → "[" (expression ("," expression)*)? "]"
+func (p *Parser) listExpression() (Expr, error) {
+	line := p.previous().Line
+	var elements []Expr
+	
+	if !p.check(RIGHT_BRACKET) {
+		for {
+			// Check for spread operator
+			if p.match(DOT_DOT) {
+				expr, err := p.expression()
+				if err != nil {
+					return nil, err
+				}
+				elements = append(elements, &Spread{Expression: expr, Line: p.previous().Line})
+			} else {
+				expr, err := p.expression()
+				if err != nil {
+					return nil, err
+				}
+				elements = append(elements, expr)
+			}
+			
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+	
+	_, err := p.consume(RIGHT_BRACKET, "Expect ']' after list elements.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &List{Elements: elements, Line: line}, nil
 }

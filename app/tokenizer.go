@@ -195,31 +195,12 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 		case ':':
 			result = append(result, Token{COLON, ":", "", lineNo})
 		case '#':
-			// Check if this is a comment (# followed by space or end of line) or a hash token
-			next, err := reader.ReadByte()
-			if err != nil {
-				if err == io.EOF {
-					result = append(result, Token{HASH, "#", "", lineNo})
-					break
-				}
+			// Hash comment - skip to end of line
+			_, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
 				return result, err
 			}
-			if next == ' ' || next == '\t' || next == '\n' || next == '\r' {
-				// This is a comment - skip to end of line
-				if next == '\n' {
-					lineNo++
-				} else {
-					_, err := reader.ReadString('\n')
-					if err != nil && err != io.EOF {
-						return result, err
-					}
-					lineNo++
-				}
-			} else {
-				// This is a hash token
-				reader.UnreadByte()
-				result = append(result, Token{HASH, "#", "", lineNo})
-			}
+			lineNo++
 		case ' ':
 			// Skip
 		case '\t':

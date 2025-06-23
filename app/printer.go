@@ -150,3 +150,90 @@ func (ap *AstPrinter) parenthesizeStrings(first string, rest ...string) string {
 	builder.WriteString(")")
 	return builder.String()
 }
+
+// Placeholder implementations for new EYG visitor methods
+func (ap *AstPrinter) VisitRecord(expr *Record) Value {
+	var fields []string
+	for _, field := range expr.Fields {
+		fieldStr := fmt.Sprintf("(field %s %s)", field.Name, field.Value.Accept(ap).(StringValue).Val)
+		fields = append(fields, fieldStr)
+	}
+	return StringValue{Val: fmt.Sprintf("(record %s)", strings.Join(fields, " "))}
+}
+
+func (ap *AstPrinter) VisitEmptyRecord(expr *EmptyRecord) Value {
+	return StringValue{Val: "{}"}
+}
+
+func (ap *AstPrinter) VisitList(expr *List) Value {
+	var elements []string
+	for _, elem := range expr.Elements {
+		elements = append(elements, elem.Accept(ap).(StringValue).Val)
+	}
+	return StringValue{Val: fmt.Sprintf("(list %s)", strings.Join(elements, " "))}
+}
+
+func (ap *AstPrinter) VisitAccess(expr *Access) Value {
+	return StringValue{Val: fmt.Sprintf("(access %s %s)", expr.Object.Accept(ap).(StringValue).Val, expr.Name)}
+}
+
+func (ap *AstPrinter) VisitBuiltin(expr *Builtin) Value {
+	var args []string
+	for _, arg := range expr.Arguments {
+		args = append(args, arg.Accept(ap).(StringValue).Val)
+	}
+	return StringValue{Val: fmt.Sprintf("(builtin %s %s)", expr.Name, strings.Join(args, " "))}
+}
+
+func (ap *AstPrinter) VisitUnion(expr *Union) Value {
+	return StringValue{Val: fmt.Sprintf("(union %s %s)", expr.Constructor, expr.Value.Accept(ap).(StringValue).Val)}
+}
+
+func (ap *AstPrinter) VisitLambda(expr *Lambda) Value {
+	return StringValue{Val: fmt.Sprintf("(lambda (args %s) %s)", strings.Join(expr.Parameters, " "), expr.Body.Accept(ap).(StringValue).Val)}
+}
+
+func (ap *AstPrinter) VisitMatch(expr *Match) Value {
+	var cases []string
+	for _, c := range expr.Cases {
+		cases = append(cases, fmt.Sprintf("(case %s %s)", c.Pattern.Accept(ap).(StringValue).Val, c.Body.Accept(ap).(StringValue).Val))
+	}
+	return StringValue{Val: fmt.Sprintf("(match %s %s)", expr.Value.Accept(ap).(StringValue).Val, strings.Join(cases, " "))}
+}
+
+func (ap *AstPrinter) VisitPerform(expr *Perform) Value {
+	var args []string
+	for _, arg := range expr.Arguments {
+		args = append(args, arg.Accept(ap).(StringValue).Val)
+	}
+	return StringValue{Val: fmt.Sprintf("(perform %s %s)", expr.Effect, strings.Join(args, " "))}
+}
+
+func (ap *AstPrinter) VisitHandle(expr *Handle) Value {
+	return StringValue{Val: fmt.Sprintf("(handle %s %s %s)", expr.Effect, expr.Handler.Accept(ap).(StringValue).Val, expr.Fallback.Accept(ap).(StringValue).Val)}
+}
+
+func (ap *AstPrinter) VisitNamedRef(expr *NamedRef) Value {
+	return StringValue{Val: fmt.Sprintf("(named_ref %s %d)", expr.Module, expr.Index)}
+}
+
+func (ap *AstPrinter) VisitThunk(expr *Thunk) Value {
+	return StringValue{Val: fmt.Sprintf("(thunk %s)", expr.Body.Accept(ap).(StringValue).Val)}
+}
+
+func (ap *AstPrinter) VisitSpread(expr *Spread) Value {
+	return StringValue{Val: fmt.Sprintf("(spread %s)", expr.Expression.Accept(ap).(StringValue).Val)}
+}
+
+func (ap *AstPrinter) VisitDestructure(expr *Destructure) Value {
+	var fields []string
+	for _, field := range expr.Fields {
+		fieldStr := fmt.Sprintf("(field %s %s)", field.Name, field.Value.Accept(ap).(StringValue).Val)
+		fields = append(fields, fieldStr)
+	}
+	return StringValue{Val: fmt.Sprintf("(destructure %s)", strings.Join(fields, " "))}
+}
+
+func (ap *AstPrinter) VisitSeq(expr *Seq) Value {
+	return StringValue{Val: fmt.Sprintf("(seq %s %s)", expr.Left.Accept(ap).(StringValue).Val, expr.Right.Accept(ap).(StringValue).Val)}
+}
