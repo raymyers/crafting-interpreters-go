@@ -318,20 +318,12 @@ func (p *Parser) statements() (Expr, error) {
 
 }
 
-// primary → NUMBER | STRING | "true" | "false" | "nil"
+// primary → NUMBER | STRING | "nil"
 //
 //		| "(" expression ")" | printStatement | varStatement
 //		| blockStatement | ifStatement | whileStatement | forStatement
 //	 | fun
 func (p *Parser) primary() (Expr, error) {
-	if p.match(FALSE) {
-		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
-	}
-
-	if p.match(TRUE) {
-		return &Literal{Value: BoolValue{Val: true}, Line: p.previous().Line}, nil
-	}
-
 	if p.match(NIL) {
 		return &Literal{Value: NilValue{}, Line: p.previous().Line}, nil
 	}
@@ -410,9 +402,6 @@ func (p *Parser) primary() (Expr, error) {
 		return p.handleExpression()
 	}
 
-	if p.match(FUN) {
-		return p.funStatement()
-	}
 	return nil, fmt.Errorf("expect expression")
 }
 

@@ -348,14 +348,8 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 	switch identifier {
 	case "and":
 		return AND
-	case "class":
-		return CLASS
 	case "else":
 		return ELSE
-	case "false":
-		return FALSE
-	case "fun":
-		return FUN
 	case "if":
 		return IF
 	case "nil":
@@ -366,12 +360,6 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return PRINT
 	case "return":
 		return RETURN
-	case "super":
-		return SUPER
-	case "this":
-		return THIS
-	case "true":
-		return TRUE
 	case "match":
 		return MATCH
 	case "perform":

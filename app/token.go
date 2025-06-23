@@ -40,18 +40,12 @@ const (
 	NUMBER
 	IDENTIFIER
 	AND
-	CLASS
 	ELSE
-	FALSE
-	FUN
 	IF
 	NIL
 	OR
 	PRINT
 	RETURN
-	SUPER
-	THIS
-	TRUE
 	MATCH
 	PERFORM
 	HANDLE
@@ -92,18 +86,12 @@ var tokenTypeName = map[TokenType]string{
 	NUMBER:        "NUMBER",
 	IDENTIFIER:    "IDENTIFIER",
 	AND:           "AND",
-	CLASS:         "CLASS",
 	ELSE:          "ELSE",
-	FALSE:         "FALSE",
-	FUN:           "FUN",
 	IF:            "IF",
 	NIL:           "NIL",
 	OR:            "OR",
 	PRINT:         "PRINT",
 	RETURN:        "RETURN",
-	SUPER:         "SUPER",
-	THIS:          "THIS",
-	TRUE:          "TRUE",
 	MATCH:         "MATCH",
 	PERFORM:       "PERFORM",
 	HANDLE:        "HANDLE",
