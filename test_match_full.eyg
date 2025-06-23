@@ -1,4 +1,0 @@
-match !int_parse("not a number") {
-  Ok(value) -> value
-  Error(_) -> -1
-}

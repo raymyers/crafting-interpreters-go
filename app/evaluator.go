@@ -88,17 +88,28 @@ func (s *Scope) assign(name string, value Value) bool {
 	return false
 }
 
+// EffectHandler represents an active effect handler
+type EffectHandler struct {
+	EffectName string
+	Handler    LambdaValue
+	Line       uint
+}
+
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct {
-	scope  *Scope
-	output io.Writer
+	scope          *Scope
+	output         io.Writer
+	effectHandlers []EffectHandler // Stack of active effect handlers
+	collectedEffects []EffectValue // Effects collected during execution
 }
 
 // NewEvaluator creates a new evaluator with the given scope and output writer
 func NewEvaluator(scope *Scope, output io.Writer) *Evaluator {
 	return &Evaluator{
-		scope:  scope,
-		output: output,
+		scope:            scope,
+		output:           output,
+		effectHandlers:   make([]EffectHandler, 0),
+		collectedEffects: make([]EffectValue, 0),
 	}
 }
 
@@ -148,7 +159,68 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 	if expr == nil {
 		return ErrorValue{"expression is nil", 0}
 	}
-	return expr.Accept(e)
+	result := expr.Accept(e)
+	
+	// Check if the result is an effect that can be handled
+	if effect, isEffect := result.(EffectValue); isEffect {
+		// First check for Log effect (built-in handler) - handle immediately
+		if effect.Name == "Log" {
+			if logHandler, exists := e.scope.lookup("Log"); exists {
+				if lambda, ok := logHandler.(LambdaValue); ok {
+					return e.callLambdaWithValues(lambda, effect.Arguments, 0)
+				}
+			}
+		}
+		
+		// Only handle other effects that have a proper continuation
+		// Effects without continuation should bubble up to be captured first
+		if effect.Continuation.Body == nil {
+			return effect
+		}
+		
+		// Check the effect handler stack for matching handlers
+		for i := len(e.effectHandlers) - 1; i >= 0; i-- {
+			handler := e.effectHandlers[i]
+			if handler.EffectName == effect.Name {
+				// Found a matching handler - call it
+				resumeFunc := LambdaValue{
+					Parameters: []string{"value"},
+					Builtin: func(args []Value) Value {
+						if len(args) != 1 {
+							return ErrorValue{Message: "resume expects 1 argument", Line: handler.Line}
+						}
+						
+							// Execute the captured continuation
+							// resumeValue := args[0] // TODO: Use this value in continuation
+							
+							// Save current scope and switch to continuation scope
+							previousScope := e.scope
+							e.scope = effect.Continuation.Scope
+							
+							// Execute the continuation body
+							result := e.Evaluate(effect.Continuation.Body)
+							
+							// Restore previous scope
+							e.scope = previousScope
+							
+							// Debug: Check if continuation produces another effect
+							if _, isEffect := result.(EffectValue); isEffect {
+								// If continuation produces another effect, propagate it
+								return result
+							}
+							
+							return result
+					},
+				}
+				
+				// Call the handler with (value, resume)
+				handlerArgs := append(effect.Arguments, resumeFunc)
+				return e.callLambdaWithValues(handler.Handler, handlerArgs, handler.Line)
+			}
+		}
+	}
+	
+	return result
 }
 
 // VisitLiteralExpr evaluates literal expressions
@@ -163,6 +235,10 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 		right := e.Evaluate(expr.Right)
 		if _, ev := right.(ErrorValue); ev {
 			return right
+		}
+		// Check if right side produces an effect
+		if _, isEffect := right.(EffectValue); isEffect {
+			return right // Propagate effect
 		}
 
 		// Handle different left-hand side patterns
@@ -372,6 +448,8 @@ func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
 	switch result.(type) {
 	case ErrorValue:
 		return result
+	case EffectValue:
+		return result // Propagate effects immediately
 	default:
 		e.scope.define(expr.name, result)
 		return NilValue{}
@@ -391,11 +469,29 @@ func (e *Evaluator) VisitBlock(expr *Block) Value {
 
 func (e *Evaluator) evalStatements(statements []Expr) Value {
 	var result Value = NilValue{}
-	for _, stmt := range statements {
+	for i, stmt := range statements {
 		result = e.Evaluate(stmt)
-		switch result.(type) {
+		switch v := result.(type) {
 		case ErrorValue:
 			return result
+		case EffectValue:
+			// Capture continuation: remaining statements
+			remainingStatements := statements[i+1:]
+			if len(remainingStatements) > 0 {
+				// Create a block with remaining statements as the continuation
+				continuationBody := &Block{Statements: remainingStatements}
+				v.Continuation = ContinuationValue{
+					Scope: e.scope, // Capture current scope
+					Body:  continuationBody,
+				}
+			} else {
+				// No remaining statements, continuation returns NilValue
+				v.Continuation = ContinuationValue{
+					Scope: e.scope,
+					Body:  &Literal{Value: NilValue{}},
+				}
+			}
+			return v // Propagate effect with continuation
 		}
 	}
 	return result
@@ -524,6 +620,51 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 }
 
 // callLambda handles lambda function calls with currying support
+// callLambdaWithValues calls a lambda with already-evaluated values
+func (e *Evaluator) callLambdaWithValues(lv LambdaValue, argValues []Value, line uint) Value {
+	// Get partial arguments
+	partialArgs := lv.PartialArgs
+	
+	// Combine partial arguments with new arguments
+	allArgs := append(partialArgs, argValues...)
+	
+	// Check if we have enough arguments to call the function
+	if len(allArgs) < len(lv.Parameters) {
+		// Not enough arguments - return a partially applied function
+		remainingParams := lv.Parameters[len(allArgs):]
+		return LambdaValue{
+			Parameters:    lv.Parameters,    // Keep original parameters
+			Body:          lv.Body,
+			Closure:       lv.Closure,
+			Builtin:       lv.Builtin,
+			PartialArgs:   allArgs,          // Store all arguments so far
+			PartialParams: remainingParams,  // Store remaining parameters
+		}
+	}
+	
+	// We have enough arguments - call the function
+	if lv.Builtin != nil {
+		return lv.Builtin(allArgs)
+	}
+	
+	// Create new scope for function execution
+	previousScope := e.scope
+	e.scope = NewScope(lv.Closure)
+	
+	// Bind parameters to arguments
+	for i, paramName := range lv.Parameters {
+		e.scope.define(paramName, allArgs[i])
+	}
+	
+	// Execute function body
+	result := e.Evaluate(lv.Body)
+	
+	// Restore previous scope
+	e.scope = previousScope
+	
+	return result
+}
+
 func (e *Evaluator) callLambda(lv LambdaValue, arguments []Expr, line uint) Value {
 	// Get partial arguments
 	partialArgs := lv.PartialArgs
@@ -672,7 +813,7 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 }
 
 func (e *Evaluator) VisitEmptyRecord(expr *EmptyRecord) Value {
-	return NilValue{}
+	return RecordValue{Fields: make(map[string]Value)}
 }
 
 func (e *Evaluator) VisitList(expr *List) Value {
@@ -926,27 +1067,6 @@ func (e *Evaluator) matchPattern(pattern Expr, value Value) (map[string]Value, b
 }
 
 func (e *Evaluator) VisitPerform(expr *Perform) Value {
-	// Look up the effect in the current scope
-	effectValue, ok := e.scope.lookup(expr.Effect)
-	if !ok {
-		return ErrorValue{Message: fmt.Sprintf("Undefined effect '%s'", expr.Effect), Line: expr.Line}
-	}
-
-	// The effect should be a lambda function
-	lambda, ok := effectValue.(LambdaValue)
-	if !ok {
-		return ErrorValue{Message: fmt.Sprintf("'%s' is not an effect function", expr.Effect), Line: expr.Line}
-	}
-
-	// Check argument count
-	if len(expr.Arguments) != len(lambda.Parameters) {
-		return ErrorValue{
-			Message: fmt.Sprintf("Effect '%s' expects %d arguments but got %d",
-				expr.Effect, len(lambda.Parameters), len(expr.Arguments)),
-			Line: expr.Line,
-		}
-	}
-
 	// Evaluate arguments
 	argValues := make([]Value, len(expr.Arguments))
 	for i, arg := range expr.Arguments {
@@ -957,26 +1077,13 @@ func (e *Evaluator) VisitPerform(expr *Perform) Value {
 		argValues[i] = argValue
 	}
 
-	// If it's a builtin effect, call it
-	if lambda.Builtin != nil {
-		return lambda.Builtin(argValues)
+	// Create an effect that will bubble up to be caught by a handler
+	// The continuation will be set when the effect bubbles up through evalStatements
+	return EffectValue{
+		Name:         expr.Effect,
+		Arguments:    argValues,
+		Continuation: ContinuationValue{}, // Empty continuation, will be set later
 	}
-
-	// Otherwise, execute the lambda with the arguments
-	previousScope := e.scope
-	e.scope = NewScope(lambda.Closure)
-
-	// Bind parameters to arguments
-	for i, paramName := range lambda.Parameters {
-		e.scope.define(paramName, argValues[i])
-	}
-
-	// Execute lambda body
-	result := e.Evaluate(lambda.Body)
-
-	// Restore previous scope
-	e.scope = previousScope
-	return result
 }
 
 func (e *Evaluator) VisitHandle(expr *Handle) Value {
@@ -986,18 +1093,40 @@ func (e *Evaluator) VisitHandle(expr *Handle) Value {
 		return handlerValue
 	}
 
-	// Create a new scope with the effect temporarily overridden
-	previousScope := e.scope
-	e.scope = NewScope(previousScope)
+	// Convert handler to LambdaValue
+	handler, ok := handlerValue.(LambdaValue)
+	if !ok {
+		return ErrorValue{Message: "Handler must be a function", Line: expr.Line}
+	}
 
-	// Define the effect in the new scope to override any existing definition
-	e.scope.define(expr.Effect, handlerValue)
+	// Push the handler onto the effect handler stack
+	effectHandler := EffectHandler{
+		EffectName: expr.Effect,
+		Handler:    handler,
+		Line:       expr.Line,
+	}
+	e.effectHandlers = append(e.effectHandlers, effectHandler)
 
-	// Evaluate the fallback expression with the new effect handler
-	result := e.Evaluate(expr.Fallback)
+	// Evaluate the fallback expression with the handler active
+	fallbackValue := e.Evaluate(expr.Fallback)
+	if _, isError := fallbackValue.(ErrorValue); isError {
+		// Pop the handler before returning error
+		e.effectHandlers = e.effectHandlers[:len(e.effectHandlers)-1]
+		return fallbackValue
+	}
 
-	// Restore the previous scope
-	e.scope = previousScope
+	// If the fallback is a lambda, call it with unit argument
+	var result Value
+	if lambda, isLambda := fallbackValue.(LambdaValue); isLambda {
+		// Call the fallback lambda with unit argument
+		unitArg := RecordValue{Fields: make(map[string]Value)}
+		result = e.callLambdaWithValues(lambda, []Value{unitArg}, expr.Line)
+	} else {
+		result = fallbackValue
+	}
+
+	// Pop the handler from the stack
+	e.effectHandlers = e.effectHandlers[:len(e.effectHandlers)-1]
 
 	return result
 }
@@ -1062,7 +1191,22 @@ func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
 }
 
 func (e *Evaluator) VisitSeq(expr *Seq) Value {
-	return ErrorValue{Message: "Seq not implemented", Line: expr.Line}
+	// Evaluate left expression first
+	leftResult := e.Evaluate(expr.Left)
+	
+	// If left produces an error or effect, propagate it immediately
+	if _, isError := leftResult.(ErrorValue); isError {
+		return leftResult
+	}
+	if _, isEffect := leftResult.(EffectValue); isEffect {
+		return leftResult
+	}
+	
+	// Then evaluate right expression
+	rightResult := e.Evaluate(expr.Right)
+	
+	// Return the result of the right expression (sequence returns last value)
+	return rightResult
 }
 
 func (e *Evaluator) VisitWildcard(expr *Wildcard) Value {

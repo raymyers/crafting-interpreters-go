@@ -1,5 +1,0 @@
-add3 = |a, b, c| a + b + c
-add1 = add3(1)
-add1_2 = add1(2)
-result = add1_2(3)
-result

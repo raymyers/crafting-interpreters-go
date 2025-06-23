@@ -1,4 +1,0 @@
-items = [1, 2]
-items = [10, ..items]
-total = !list_fold(items, 0, |a, b| a + b)
-total

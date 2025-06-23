@@ -1,3 +1,0 @@
-bob = {name: "Bob", height: 192}
-result = {height: 100, ..bob}
-result

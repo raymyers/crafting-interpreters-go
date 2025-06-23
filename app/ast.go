@@ -74,6 +74,23 @@ type LambdaValue struct {
 
 func (LambdaValue) implValue() {}
 
+// ContinuationValue represents a captured continuation for effect handling
+type ContinuationValue struct {
+	Scope *Scope
+	Body  Expr
+}
+
+func (ContinuationValue) implValue() {}
+
+// EffectValue represents an effect that needs to be handled
+type EffectValue struct {
+	Name         string
+	Arguments    []Value
+	Continuation ContinuationValue
+}
+
+func (EffectValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
 	Accept(visitor ExprVisitor) Value

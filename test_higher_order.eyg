@@ -1,6 +1,0 @@
-inc = |x| x + 1
-twice = |f, x| {
-  f(f(x))
-}
-inc2 = twice(inc)
-inc2(5)
