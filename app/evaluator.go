@@ -2,9 +2,57 @@ package main
 
 import "fmt"
 
+// Scope represents a variable scope with optional parent scope
+type Scope struct {
+	envMap map[string]Value
+	parent *Scope
+}
+
+// NewScope creates a new scope with optional parent
+func NewScope(parent *Scope) *Scope {
+	return &Scope{
+		envMap: make(map[string]Value),
+		parent: parent,
+	}
+}
+
+// lookup searches for a variable in this scope and parent scopes
+func (s *Scope) lookup(name string) (Value, bool) {
+	if value, exists := s.envMap[name]; exists {
+		return value, true
+	}
+	if s.parent != nil {
+		return s.parent.lookup(name)
+	}
+	return NilValue{}, false
+}
+
+// isDefined checks if a variable is defined in this scope or parent scopes
+func (s *Scope) isDefined(name string) bool {
+	_, exists := s.lookup(name)
+	return exists
+}
+
+// define adds a variable to the current scope
+func (s *Scope) define(name string, value Value) {
+	s.envMap[name] = value
+}
+
+// assign sets a variable value in the appropriate scope
+func (s *Scope) assign(name string, value Value) bool {
+	if _, exists := s.envMap[name]; exists {
+		s.envMap[name] = value
+		return true
+	}
+	if s.parent != nil {
+		return s.parent.assign(name, value)
+	}
+	return false
+}
+
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct {
-	env map[string]Value
+	scope *Scope
 }
 
 // Evaluate evaluates an expression and returns its value
@@ -29,9 +77,10 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 				return right
 			}
 			varName := leftVar.Name.Lexeme
-			if _, ok := e.env[varName]; ok {
-				e.env[varName] = right
-				return right
+			if e.scope.isDefined(varName) {
+				if e.scope.assign(varName, right) {
+					return right
+				}
 			}
 			return ErrorValue{Message: "Assigned variable must be defined", Line: expr.Line}
 		} else {
@@ -148,7 +197,7 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 
 // VisitVariableExpr evaluates variable expressions
 func (e *Evaluator) VisitVariableExpr(expr *Variable) Value {
-	if value, ok := e.env[expr.Name.Lexeme]; ok {
+	if value, ok := e.scope.lookup(expr.Name.Lexeme); ok {
 		return value
 	}
 	return ErrorValue{Message: fmt.Sprintf("Undefined variable '%s'", expr.Name.Lexeme), Line: expr.Line}
@@ -183,31 +232,29 @@ func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
 	case ErrorValue:
 		return result
 	default:
-		e.env[expr.name] = result
+		e.scope.define(expr.name, result)
 		return NilValue{}
 	}
 }
 
 func (e *Evaluator) VisitBlock(expr *Block) Value {
 	// Create new scope for block
-	previousEnv := make(map[string]Value)
-	for k, v := range e.env {
-		previousEnv[k] = v
-	}
+	previousScope := e.scope
+	e.scope = NewScope(previousScope)
 	
 	var result Value = NilValue{}
 	for _, stmt := range expr.Statements {
 		result = e.Evaluate(stmt)
 		switch result.(type) {
 		case ErrorValue:
-			// Restore previous environment on error
-			e.env = previousEnv
+			// Restore previous scope on error
+			e.scope = previousScope
 			return result
 		}
 	}
 	
-	// Restore previous environment (block scoping)
-	e.env = previousEnv
+	// Restore previous scope (block scoping)
+	e.scope = previousScope
 	return result
 }
 

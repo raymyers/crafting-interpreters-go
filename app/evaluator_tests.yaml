@@ -158,3 +158,25 @@ evaluator_tests:
         a
       }
     expected: "2"
+
+  - name: "NestedScope"
+    input: |
+      {
+        var a = 1;
+        {
+          a = 2
+        }
+        a
+      }
+    expected: "2"
+
+  - name: "NestedScopeRedefine"
+    input: |
+      {
+        var a = 1;
+        {
+          var a = 2
+        }
+        a
+      }
+    expected: "1"

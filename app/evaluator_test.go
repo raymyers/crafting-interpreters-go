@@ -19,7 +19,7 @@ func evaluateToString(input string) string {
 		return "Parse error: " + err.Error()
 	}
 
-	evaluator := &Evaluator{env: make(map[string]Value)}
+	evaluator := &Evaluator{scope: NewScope(nil)}
 	result := evaluator.Evaluate(expr)
 	if ev, isErrVal := result.(ErrorValue); isErrVal {
 		return "Evaluation error: " + ev.Message
