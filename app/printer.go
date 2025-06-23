@@ -66,6 +66,17 @@ func (ap *AstPrinter) VisitStatements(expr *Statements) Value {
 	return StringValue{Val: ap.parenthesize("seq", expr.Exprs...)}
 }
 
+func (ap *AstPrinter) VisitVarStatement(expr *VarStatement) Value {
+	var strVal string
+	if str, ok := expr.Expression.Accept(ap).(StringValue); ok {
+		strVal = str.Val
+	} else {
+		strVal = "?"
+	}
+
+	return StringValue{Val: ap.parenthesizeStrings("var", expr.name, strVal)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder
@@ -79,6 +90,21 @@ func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 		if str, ok := result.(StringValue); ok {
 			builder.WriteString(str.Val)
 		}
+	}
+
+	builder.WriteString(")")
+	return builder.String()
+}
+
+func (ap *AstPrinter) parenthesizeStrings(first string, rest ...string) string {
+	var builder strings.Builder
+
+	builder.WriteString("(")
+	builder.WriteString(first)
+
+	for _, item := range rest {
+		builder.WriteString(" ")
+		builder.WriteString(item)
 	}
 
 	builder.WriteString(")")

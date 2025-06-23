@@ -150,6 +150,16 @@ func (e *Evaluator) VisitStatements(expr *Statements) Value {
 	return result
 }
 
+func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
+	result := e.Evaluate(expr.Expression)
+	switch result.(type) {
+	case ErrorValue:
+		return result
+	default:
+		return NilValue{}
+	}
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

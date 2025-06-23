@@ -147,7 +147,9 @@ func (p *Parser) statements() (Expr, error) {
 
 }
 
-// primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | printStatement
+// primary → NUMBER | STRING | "true" | "false" | "nil"
+//
+//	| "(" expression ")" | printStatement | varStatement
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -197,7 +199,21 @@ func (p *Parser) primary() (Expr, error) {
 
 		return &PrintStatement{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
+	if p.match(VAR) {
+		if !p.match(IDENTIFIER) {
+			return nil, fmt.Errorf("expect identifier")
+		}
+		varName := p.previous().Lexeme
+		if !p.match(EQUAL) {
+			return nil, fmt.Errorf("expect equal")
+		}
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
 
+		return &VarStatement{name: varName, Expression: expr, Line: p.tokens[p.current-2].Line}, nil
+	}
 	return nil, fmt.Errorf("expect expression")
 }
 

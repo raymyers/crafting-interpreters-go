@@ -51,6 +51,7 @@ type ExprVisitor interface {
 	VisitUnaryExpr(expr *Unary) Value
 	VisitPrintStatement(expr *PrintStatement) Value
 	VisitStatements(expr *Statements) Value
+	VisitVarStatement(expr *VarStatement) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -104,6 +105,17 @@ type PrintStatement struct {
 
 func (g *PrintStatement) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitPrintStatement(g)
+}
+
+// VarStatement (e.g., var a = 1)
+type VarStatement struct {
+	name       string
+	Expression Expr
+	Line       uint
+}
+
+func (g *VarStatement) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitVarStatement(g)
 }
 
 type Statements struct {

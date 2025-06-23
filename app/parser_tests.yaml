@@ -84,3 +84,7 @@ parser_tests:
       print "a";
       print "b";
     expected: '(seq (print a) (print b))'
+
+  - name: "Var"
+    input: var world = 10;
+    expected: '(var world 10.0)'
