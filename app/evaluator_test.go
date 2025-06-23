@@ -20,9 +20,9 @@ func evaluateToString(input string) string {
 	}
 
 	evaluator := &Evaluator{}
-	result, err := evaluator.Evaluate(expr)
-	if err != nil {
-		return "Evaluation error: " + err.Error()
+	result := evaluator.Evaluate(expr)
+	if ev, isErrVal := result.(ErrorValue); isErrVal {
+		return "Evaluation error: " + ev.Message
 	}
 
 	return formatValue(result)

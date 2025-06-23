@@ -122,3 +122,7 @@ evaluator_tests:
   - name: "StringNeqFalse"
     input: '"hello" != "hello"'
     expected: "false"
+
+  - name: "Print"
+    input: 'print "hello"'
+    expected: "nil"

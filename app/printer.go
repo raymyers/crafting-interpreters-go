@@ -58,6 +58,10 @@ func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) Value {
 	return StringValue{Val: ap.parenthesize(expr.Operator.Lexeme, expr.Right)}
 }
 
+func (ap *AstPrinter) VisitPrintStatement(expr *PrintStatement) Value {
+	return StringValue{Val: ap.parenthesize("print", expr.Expression)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder

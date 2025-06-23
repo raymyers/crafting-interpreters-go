@@ -1,26 +1,14 @@
 package main
 
-import (
-	"fmt"
-)
-
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct{}
 
 // Evaluate evaluates an expression and returns its value
-func (e *Evaluator) Evaluate(expr Expr) (Value, error) {
-
+func (e *Evaluator) Evaluate(expr Expr) Value {
 	if expr == nil {
-		return NilValue{}, fmt.Errorf("expression is nil")
+		return ErrorValue{"expression is nil", 0}
 	}
-	result := expr.Accept(e)
-	switch result.(type) {
-	case ErrorValue:
-		errorText := fmt.Errorf("[Line %d]\nError: %s", result.(ErrorValue).Line, result.(ErrorValue).Message)
-		return NilValue{}, errorText
-	default:
-		return result, nil
-	}
+	return expr.Accept(e)
 }
 
 // VisitLiteralExpr evaluates literal expressions
@@ -30,9 +18,14 @@ func (e *Evaluator) VisitLiteralExpr(expr *Literal) Value {
 
 // VisitBinaryExpr evaluates binary expressions
 func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
-	left, _ := e.Evaluate(expr.Left)
-	right, _ := e.Evaluate(expr.Right)
-
+	left := e.Evaluate(expr.Left)
+	right := e.Evaluate(expr.Right)
+	if _, ev := left.(ErrorValue); ev {
+		return right
+	}
+	if _, ev := right.(ErrorValue); ev {
+		return right
+	}
 	switch expr.Operator.Type {
 	case PLUS:
 		if leftNum, ok := left.(NumberValue); ok {
@@ -109,14 +102,15 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 
 // VisitGroupingExpr evaluates grouping expressions
 func (e *Evaluator) VisitGroupingExpr(expr *Grouping) Value {
-	result, _ := e.Evaluate(expr.Expression)
-	return result
+	return e.Evaluate(expr.Expression)
 }
 
 // VisitUnaryExpr evaluates unary expressions
 func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
-	right, _ := e.Evaluate(expr.Right)
-
+	right := e.Evaluate(expr.Right)
+	if _, ev := right.(ErrorValue); ev {
+		return right
+	}
 	switch expr.Operator.Type {
 	case MINUS:
 		if num, ok := right.(NumberValue); ok {
@@ -128,6 +122,19 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 	}
 
 	return ErrorValue{Message: "Unknown unary operator", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
+	result := e.Evaluate(expr.Expression)
+	switch result.(type) {
+	case StringValue:
+		print(result.(StringValue).Val)
+		return NilValue{}
+	case ErrorValue:
+		return result
+	default:
+		return ErrorValue{Message: "Operand must be a string", Line: expr.Line}
+	}
 }
 
 // isTruthy determines the truthiness of a value following Lox rules

@@ -119,7 +119,7 @@ func (p *Parser) unary() (Expr, error) {
 	return p.primary()
 }
 
-// primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")"
+// primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | printStatement
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -159,6 +159,15 @@ func (p *Parser) primary() (Expr, error) {
 			return nil, err
 		}
 		return &Grouping{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
+	}
+
+	if p.match(PRINT) {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+
+		return &PrintStatement{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
 
 	return nil, fmt.Errorf("expect expression")

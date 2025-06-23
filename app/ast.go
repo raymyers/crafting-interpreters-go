@@ -49,6 +49,7 @@ type ExprVisitor interface {
 	VisitGroupingExpr(expr *Grouping) Value
 	VisitLiteralExpr(expr *Literal) Value
 	VisitUnaryExpr(expr *Unary) Value
+	VisitPrintStatement(expr *PrintStatement) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -92,4 +93,14 @@ type Unary struct {
 
 func (u *Unary) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitUnaryExpr(u)
+}
+
+// PrintStatement (e.g., (1 + 2))
+type PrintStatement struct {
+	Expression Expr
+	Line       uint
+}
+
+func (g *PrintStatement) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitPrintStatement(g)
 }
