@@ -22,11 +22,28 @@ func (e *Evaluator) VisitLiteralExpr(expr *Literal) Value {
 
 // VisitBinaryExpr evaluates binary expressions
 func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
+	if expr.Operator.Type == EQUAL {
+		if leftVar, ok := expr.Left.(*Variable); ok {
+			right := e.Evaluate(expr.Right)
+			if _, ev := right.(ErrorValue); ev {
+				return right
+			}
+			varName := leftVar.Name.Lexeme
+			if _, ok := e.env[varName]; ok {
+				e.env[varName] = right
+				return right
+			}
+			return ErrorValue{Message: "Assigned variable must be defined", Line: expr.Line}
+		} else {
+			return ErrorValue{Message: "Left of = must be a variable", Line: expr.Line}
+		}
+
+	}
 	left := e.Evaluate(expr.Left)
-	right := e.Evaluate(expr.Right)
 	if _, ev := left.(ErrorValue); ev {
 		return left
 	}
+	right := e.Evaluate(expr.Right)
 	if _, ev := right.(ErrorValue); ev {
 		return right
 	}

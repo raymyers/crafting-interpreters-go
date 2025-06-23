@@ -141,3 +141,10 @@ evaluator_tests:
       var a = "hello";
       a
     expected: "hello"
+
+  - name: "VarAssign"
+    input: |
+      var a = "hello";
+      a = "world";
+      a
+    expected: "world"

@@ -24,9 +24,28 @@ func (p *Parser) Parse() (Expr, error) {
 	return p.statements()
 }
 
-// expression → equality
+// expression → assignment
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
+}
+
+// assignment → equality ( "=" assignment )*
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(EQUAL) {
+		operator := p.previous()
+		right, err := p.assignment() // Right-associative
+		if err != nil {
+			return nil, err
+		}
+		return &Binary{Left: expr, Operator: operator, Right: right, Line: operator.Line}, nil
+	}
+
+	return expr, nil
 }
 
 // equality → comparison ( ( "!=" | "==" ) comparison )*
