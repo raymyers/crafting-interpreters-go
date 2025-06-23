@@ -68,6 +68,22 @@ func NewEvaluator(scope *Scope, output io.Writer) *Evaluator {
 	}
 }
 
+// Helper functions to create Union types for booleans
+func trueValue() UnionValue {
+	return UnionValue{Constructor: "True", Value: NilValue{}}
+}
+
+func falseValue() UnionValue {
+	return UnionValue{Constructor: "False", Value: NilValue{}}
+}
+
+func boolToUnion(b bool) UnionValue {
+	if b {
+		return trueValue()
+	}
+	return falseValue()
+}
+
 // Evaluate evaluates an expression and returns its value
 func (e *Evaluator) Evaluate(expr Expr) Value {
 	if expr == nil {
@@ -94,8 +110,12 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 				if e.scope.assign(varName, right) {
 					return right
 				}
+			} else {
+				// Define new variable in current scope
+				e.scope.define(varName, right)
+				return right
 			}
-			return ErrorValue{Message: "Assigned variable must be defined", Line: expr.Line}
+			return ErrorValue{Message: "Assignment failed", Line: expr.Line}
 		} else {
 			return ErrorValue{Message: "Left of = must be a variable", Line: expr.Line}
 		}
@@ -170,35 +190,35 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 	case LESS:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
-				return BoolValue{Val: leftNum.Val < rightNum.Val}
+				return boolToUnion(leftNum.Val < rightNum.Val)
 			}
 		}
 		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case LESS_EQUAL:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
-				return BoolValue{Val: leftNum.Val <= rightNum.Val}
+				return boolToUnion(leftNum.Val <= rightNum.Val)
 			}
 		}
 		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case GREATER:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
-				return BoolValue{Val: leftNum.Val > rightNum.Val}
+				return boolToUnion(leftNum.Val > rightNum.Val)
 			}
 		}
 		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case GREATER_EQUAL:
 		if leftNum, ok := left.(NumberValue); ok {
 			if rightNum, ok := right.(NumberValue); ok {
-				return BoolValue{Val: leftNum.Val >= rightNum.Val}
+				return boolToUnion(leftNum.Val >= rightNum.Val)
 			}
 		}
 		return ErrorValue{Message: "Operands must be numbers", Line: expr.Line}
 	case EQUAL_EQUAL:
-		return BoolValue{Val: isEqual(left, right)}
+		return boolToUnion(isEqual(left, right))
 	case BANG_EQUAL:
-		return BoolValue{Val: !isEqual(left, right)}
+		return boolToUnion(!isEqual(left, right))
 	}
 
 	return ErrorValue{Message: "Unknown binary operator", Line: expr.Line}
@@ -222,7 +242,7 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 		}
 		return ErrorValue{Message: "Operand must be a number", Line: expr.Line}
 	case BANG:
-		return BoolValue{Val: !isTruthy(right)}
+		return boolToUnion(!isTruthy(right))
 	}
 
 	return ErrorValue{Message: "Unknown unary operator", Line: expr.Line}
@@ -435,6 +455,9 @@ func isTruthy(value Value) bool {
 		return false
 	case BoolValue:
 		return v.Val
+	case UnionValue:
+		// True({}) is truthy, False({}) is falsy
+		return v.Constructor == "True"
 	default:
 		return true
 	}
@@ -468,7 +491,7 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 }
 
 func (e *Evaluator) VisitEmptyRecord(expr *EmptyRecord) Value {
-	return ErrorValue{Message: "EmptyRecord not implemented", Line: expr.Line}
+	return NilValue{}
 }
 
 func (e *Evaluator) VisitList(expr *List) Value {
@@ -484,7 +507,11 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 }
 
 func (e *Evaluator) VisitUnion(expr *Union) Value {
-	return ErrorValue{Message: "Union not implemented", Line: expr.Line}
+	value := e.Evaluate(expr.Value)
+	if _, ev := value.(ErrorValue); ev {
+		return value
+	}
+	return UnionValue{Constructor: expr.Constructor, Value: value}
 }
 
 func (e *Evaluator) VisitLambda(expr *Lambda) Value {

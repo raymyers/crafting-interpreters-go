@@ -44,6 +44,13 @@ type ErrorValue struct {
 
 func (ErrorValue) implValue() {}
 
+type UnionValue struct {
+	Constructor string
+	Value       Value
+}
+
+func (UnionValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
 	Accept(visitor ExprVisitor) Value

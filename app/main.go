@@ -116,7 +116,7 @@ func handleEvaluate(filename string, printResult bool) {
 func formatValue(value Value) string {
 	switch v := value.(type) {
 	case NilValue:
-		return "nil"
+		return "{}"
 	case NumberValue:
 		return fmt.Sprintf("%g", v.Val)
 	case StringValue:
@@ -126,6 +126,11 @@ func formatValue(value Value) string {
 			return "true"
 		}
 		return "false"
+	case UnionValue:
+		if _, isNil := v.Value.(NilValue); isNil {
+			return fmt.Sprintf("%s({})", v.Constructor)
+		}
+		return fmt.Sprintf("%s(%s)", v.Constructor, formatValue(v.Value))
 	case FunValue:
 		return fmt.Sprintf("<fn %s>", v.Val.Name)
 	default:
