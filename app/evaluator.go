@@ -98,6 +98,16 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 		}
 		return e.Evaluate(expr.Right)
 	}
+	if expr.Operator.Type == AND {
+		left := e.Evaluate(expr.Left)
+		if _, ev := left.(ErrorValue); ev {
+			return left
+		}
+		if !isTruthy(left) {
+			return left
+		}
+		return e.Evaluate(expr.Right)
+	}
 	left := e.Evaluate(expr.Left)
 	if _, ev := left.(ErrorValue); ev {
 		return left

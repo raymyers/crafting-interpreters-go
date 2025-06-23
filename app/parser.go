@@ -67,14 +67,14 @@ func (p *Parser) equality() (Expr, error) {
 	return expr, nil
 }
 
-// comparison → term ( ( "or" | ">" | ">=" | "<" | "<=" ) term )*
+// comparison → term ( ( "or" | "and" | ">" | ">=" | "<" | "<=" ) term )*
 func (p *Parser) comparison() (Expr, error) {
 	expr, err := p.term()
 	if err != nil {
 		return nil, err
 	}
 
-	for p.match(OR, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL) {
+	for p.match(OR, AND, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL) {
 		operator := p.previous()
 		right, err := p.term()
 		if err != nil {

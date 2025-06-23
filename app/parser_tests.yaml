@@ -144,3 +144,7 @@ parser_tests:
     input: |
       print false or false or true;
     expected: '(print (or (or false false) true))'
+  - name: "And"
+    input: |
+      true and false
+    expected: '(and true false)'

@@ -205,3 +205,11 @@ evaluator_tests:
     input: |
       27 or true
     expected: "27"
+  - name: "AndLastTruthy"
+    input: |
+      27 and 67
+    expected: "67"
+  - name: "AndFalse"
+    input: |
+      false and 56
+    expected: "false"
