@@ -188,6 +188,29 @@ func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
 	}
 }
 
+func (e *Evaluator) VisitBlock(expr *Block) Value {
+	// Create new scope for block
+	previousEnv := make(map[string]Value)
+	for k, v := range e.env {
+		previousEnv[k] = v
+	}
+	
+	var result Value = NilValue{}
+	for _, stmt := range expr.Statements {
+		result = e.Evaluate(stmt)
+		switch result.(type) {
+		case ErrorValue:
+			// Restore previous environment on error
+			e.env = previousEnv
+			return result
+		}
+	}
+	
+	// Restore previous environment (block scoping)
+	e.env = previousEnv
+	return result
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

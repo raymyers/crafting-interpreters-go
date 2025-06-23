@@ -148,3 +148,13 @@ evaluator_tests:
       a = "world";
       a
     expected: "world"
+
+  - name: "Block"
+    input: |
+      {
+        var a = {
+          1 + 1
+        }
+        a
+      }
+    expected: "2"

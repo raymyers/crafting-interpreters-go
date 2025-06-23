@@ -168,7 +168,7 @@ func (p *Parser) statements() (Expr, error) {
 
 // primary → NUMBER | STRING | "true" | "false" | "nil"
 //
-//	| "(" expression ")" | printStatement | varStatement
+//	| "(" expression ")" | printStatement | varStatement | blockStatement
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -239,7 +239,35 @@ func (p *Parser) primary() (Expr, error) {
 		return &Variable{Name: token, Line: token.Line}, nil
 	}
 
+	if p.match(LBRAC) {
+		return p.blockStatement()
+	}
+
 	return nil, fmt.Errorf("expect expression")
+}
+
+// blockStatement → "{" statements "}"
+func (p *Parser) blockStatement() (Expr, error) {
+	line := p.previous().Line
+	var statements []Expr
+	
+	for !p.check(RBRAC) && !p.isAtEnd() {
+		stmt, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, stmt)
+		
+		// Optional semicolon after each statement
+		p.match(SEMICOLON)
+	}
+	
+	_, err := p.consume(RBRAC, "Expect '}' after block.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Block{Statements: statements, Line: line}, nil
 }
 
 // Helper methods

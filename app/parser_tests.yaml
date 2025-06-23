@@ -96,3 +96,11 @@ parser_tests:
   - name: "Assign"
     input: a = b = 1
     expected: '(= a (= b 1.0))'
+
+  - name: "Block"
+    input: |
+      {
+        print "a";
+        print "b";
+      }
+    expected: '(block (print a) (print b))'
