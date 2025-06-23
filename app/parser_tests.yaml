@@ -121,3 +121,17 @@ parser_tests:
       }
       3
     expected: '(seq 1.0 (block 2.0) 3.0)'
+  - name: "if"
+    input: |
+      if (true) {
+        1
+      }
+    expected: '(if true (block 1.0))'
+  - name: "ifElse"
+    input: |
+      if (true) {
+        1
+      } else {
+        2
+      }
+    expected: '(if true (block 1.0) (block 2.0))'

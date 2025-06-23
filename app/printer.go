@@ -86,6 +86,13 @@ func (ap *AstPrinter) VisitBlock(expr *Block) Value {
 	return StringValue{Val: ap.parenthesize("block", expr.Statements...)}
 }
 
+func (ap *AstPrinter) VisitIfStatement(expr *IfStatement) Value {
+	if expr.ElseBranch != nil {
+		return StringValue{Val: ap.parenthesize("if", expr.Condition, expr.ThenBranch, expr.ElseBranch)}
+	}
+	return StringValue{Val: ap.parenthesize("if", expr.Condition, expr.ThenBranch)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder

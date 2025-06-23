@@ -258,6 +258,21 @@ func (e *Evaluator) VisitBlock(expr *Block) Value {
 	return result
 }
 
+func (e *Evaluator) VisitIfStatement(expr *IfStatement) Value {
+	conditionValue := e.Evaluate(expr.Condition)
+	if _, isError := conditionValue.(ErrorValue); isError {
+		return conditionValue
+	}
+	
+	if isTruthy(conditionValue) {
+		return e.Evaluate(expr.ThenBranch)
+	} else if expr.ElseBranch != nil {
+		return e.Evaluate(expr.ElseBranch)
+	}
+	
+	return NilValue{}
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

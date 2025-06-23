@@ -167,7 +167,7 @@ func (p *Parser) statements() (Expr, error) {
 
 // primary → NUMBER | STRING | "true" | "false" | "nil"
 //
-//	| "(" expression ")" | printStatement | varStatement | blockStatement
+//	| "(" expression ")" | printStatement | varStatement | blockStatement | ifStatement
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -233,6 +233,10 @@ func (p *Parser) primary() (Expr, error) {
 		return &VarStatement{name: varName, Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
 
+	if p.match(IF) {
+		return p.ifStatement()
+	}
+
 	if p.match(IDENTIFIER) {
 		token := p.previous()
 		return &Variable{Name: token, Line: token.Line}, nil
@@ -267,6 +271,46 @@ func (p *Parser) blockStatement() (Expr, error) {
 	}
 
 	return &Block{Statements: statements, Line: line}, nil
+}
+
+// ifStatement → "if" "(" expression ")" expression ( "else" expression )?
+func (p *Parser) ifStatement() (Expr, error) {
+	line := p.previous().Line
+	
+	_, err := p.consume(LPAR, "Expect '(' after 'if'.")
+	if err != nil {
+		return nil, err
+	}
+	
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(RPAR, "Expect ')' after if condition.")
+	if err != nil {
+		return nil, err
+	}
+	
+	thenBranch, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	var elseBranch Expr
+	if p.match(ELSE) {
+		elseBranch, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	
+	return &IfStatement{
+		Condition:  condition,
+		ThenBranch: thenBranch,
+		ElseBranch: elseBranch,
+		Line:       line,
+	}, nil
 }
 
 // Helper methods

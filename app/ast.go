@@ -54,6 +54,7 @@ type ExprVisitor interface {
 	VisitStatements(expr *Statements) Value
 	VisitVarStatement(expr *VarStatement) Value
 	VisitBlock(expr *Block) Value
+	VisitIfStatement(expr *IfStatement) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -147,4 +148,16 @@ type Block struct {
 
 func (b *Block) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitBlock(b)
+}
+
+// IfStatement represents an if statement (e.g., if (condition) { then })
+type IfStatement struct {
+	Condition Expr
+	ThenBranch Expr
+	ElseBranch Expr
+	Line      uint
+}
+
+func (i *IfStatement) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitIfStatement(i)
 }

@@ -180,3 +180,20 @@ evaluator_tests:
         a
       }
     expected: "1"
+
+  - name: "IfTrue"
+    input: |
+      var a = 1;
+      if (true) {
+        a = 2;
+      }
+      a
+    expected: "2"
+  - name: "IfFalse"
+    input: |
+      var a = 1;
+      if (false) {
+        a = 2;
+      }
+      a
+    expected: "1"
