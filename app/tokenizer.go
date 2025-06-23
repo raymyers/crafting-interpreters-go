@@ -50,16 +50,46 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{LBRAC, "{", "", lineNo})
 		case '}':
 			result = append(result, Token{RBRAC, "}", "", lineNo})
+		case '[':
+			result = append(result, Token{LEFT_BRACKET, "[", "", lineNo})
+		case ']':
+			result = append(result, Token{RIGHT_BRACKET, "]", "", lineNo})
 		case '*':
 			result = append(result, Token{STAR, "*", "", lineNo})
 		case '.':
-			result = append(result, Token{DOT, ".", "", lineNo})
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{DOT, ".", "", lineNo})
+				break
+			}
+			if next == '.' {
+				result = append(result, Token{DOT_DOT, "..", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{DOT, ".", "", lineNo})
+			}
 		case ',':
 			result = append(result, Token{COMMA, ",", "", lineNo})
 		case '+':
 			result = append(result, Token{PLUS, "+", "", lineNo})
 		case '-':
-			result = append(result, Token{MINUS, "-", "", lineNo})
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{MINUS, "-", "", lineNo})
+				break
+			}
+			if next == '>' {
+				result = append(result, Token{ARROW, "->", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{MINUS, "-", "", lineNo})
+			}
 		case ';':
 			result = append(result, Token{SEMICOLON, ";", "", lineNo})
 		case '!':
@@ -144,6 +174,51 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 					return nil, err
 				}
 				result = append(result, Token{SLASH, "/", "", lineNo})
+			}
+		case '|':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{PIPE, "|", "", lineNo})
+				break
+			}
+			if next == '|' {
+				result = append(result, Token{PIPE_PIPE, "||", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{PIPE, "|", "", lineNo})
+			}
+		case '@':
+			result = append(result, Token{AT, "@", "", lineNo})
+		case ':':
+			result = append(result, Token{COLON, ":", "", lineNo})
+		case '#':
+			// Check if this is a comment (# followed by space or end of line) or a hash token
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err == io.EOF {
+					result = append(result, Token{HASH, "#", "", lineNo})
+					break
+				}
+				return result, err
+			}
+			if next == ' ' || next == '\t' || next == '\n' || next == '\r' {
+				// This is a comment - skip to end of line
+				if next == '\n' {
+					lineNo++
+				} else {
+					_, err := reader.ReadString('\n')
+					if err != nil && err != io.EOF {
+						return result, err
+					}
+					lineNo++
+				}
+			} else {
+				// This is a hash token
+				reader.UnreadByte()
+				result = append(result, Token{HASH, "#", "", lineNo})
 			}
 		case ' ':
 			// Skip
@@ -322,6 +397,12 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return VAR
 	case "while":
 		return WHILE
+	case "match":
+		return MATCH
+	case "perform":
+		return PERFORM
+	case "handle":
+		return HANDLE
 	default:
 		return IDENTIFIER
 	}
