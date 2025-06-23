@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Parser converts tokens into an AST
@@ -42,6 +43,14 @@ func (p *Parser) assignment() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
+		
+		// Check if left side is a record pattern for destructuring
+		if record, ok := expr.(*Record); ok {
+			// Convert record to destructure pattern
+			destructure := &Destructure{Fields: record.Fields, Line: record.Line}
+			return &Binary{Left: destructure, Operator: operator, Right: right, Line: operator.Line}, nil
+		}
+		
 		return &Binary{Left: expr, Operator: operator, Right: right, Line: operator.Line}, nil
 	}
 
@@ -124,8 +133,16 @@ func (p *Parser) factor() (Expr, error) {
 	return expr, nil
 }
 
-// unary → ( "!" | "-" ) unary | call
+// unary → ( "!" | "-" ) unary | "||" expression | call
 func (p *Parser) unary() (Expr, error) {
+	if p.match(PIPE_PIPE) {
+		line := p.previous().Line
+		body, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		return &Thunk{Body: body, Line: line}, nil
+	}
 	if p.match(BANG) {
 		operator := p.previous()
 		// Check if this is a builtin call (!identifier(...))
@@ -385,6 +402,26 @@ func (p *Parser) primary() (Expr, error) {
 	
 	if p.match(LEFT_BRACKET) {
 		return p.listExpression()
+	}
+	
+	if p.match(PIPE) {
+		return p.lambda()
+	}
+	
+	if p.match(AT) {
+		return p.namedRef()
+	}
+	
+	if p.match(PERFORM) {
+		return p.performExpression()
+	}
+	
+	if p.match(MATCH) {
+		return p.matchExpression()
+	}
+	
+	if p.match(HANDLE) {
+		return p.handleExpression()
 	}
 	
 	if p.match(FUN) {
@@ -733,4 +770,211 @@ func (p *Parser) listExpression() (Expr, error) {
 	}
 	
 	return &List{Elements: elements, Line: line}, nil
+}
+
+// namedRef → "@" identifier ":" number
+func (p *Parser) namedRef() (Expr, error) {
+	line := p.previous().Line
+	
+	module, err := p.consume(IDENTIFIER, "Expect module name after '@'.")
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(COLON, "Expect ':' after module name.")
+	if err != nil {
+		return nil, err
+	}
+	
+	indexToken, err := p.consume(NUMBER, "Expect number after ':'.")
+	if err != nil {
+		return nil, err
+	}
+	
+	index, err := strconv.Atoi(indexToken.Lexeme)
+	if err != nil {
+		return nil, fmt.Errorf("invalid index: %s", indexToken.Lexeme)
+	}
+	
+	return &NamedRef{Module: module.Lexeme, Index: index, Line: line}, nil
+}
+
+// lambda → "|" parameters "|" expression
+func (p *Parser) lambda() (Expr, error) {
+	line := p.previous().Line
+	
+	var parameters []string
+	if !p.check(PIPE) {
+		for {
+			param, err := p.consume(IDENTIFIER, "Expect parameter name.")
+			if err != nil {
+				return nil, err
+			}
+			parameters = append(parameters, param.Lexeme)
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+	
+	_, err := p.consume(PIPE, "Expect '|' after parameters.")
+	if err != nil {
+		return nil, err
+	}
+	
+	body, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	// If the body is a block with a single expression, unwrap it
+	if block, ok := body.(*Block); ok && len(block.Statements) == 1 {
+		if expr, ok := block.Statements[0].(Expr); ok {
+			body = expr
+		}
+	}
+	
+	return &Lambda{Parameters: parameters, Body: body, Line: line}, nil
+}
+
+// performExpression → "perform" identifier "(" arguments ")"
+func (p *Parser) performExpression() (Expr, error) {
+	line := p.previous().Line
+	
+	effect, err := p.consume(IDENTIFIER, "Expect effect name after 'perform'.")
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(LPAR, "Expect '(' after effect name.")
+	if err != nil {
+		return nil, err
+	}
+	
+	var arguments []Expr
+	if !p.check(RPAR) {
+		for {
+			arg, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			arguments = append(arguments, arg)
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+	
+	_, err = p.consume(RPAR, "Expect ')' after arguments.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Perform{Effect: effect.Lexeme, Arguments: arguments, Line: line}, nil
+}
+
+// matchExpression → "match" expression "{" matchCase* "}"
+func (p *Parser) matchExpression() (Expr, error) {
+	line := p.previous().Line
+	
+	value, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(LBRAC, "Expect '{' after match value.")
+	if err != nil {
+		return nil, err
+	}
+	
+	var cases []MatchCase
+	for !p.check(RBRAC) && !p.isAtEnd() {
+		// Parse pattern: Constructor(params) or Constructor(_)
+		constructor, err := p.consume(IDENTIFIER, "Expect constructor name.")
+		if err != nil {
+			return nil, err
+		}
+		
+		_, err = p.consume(LPAR, "Expect '(' after constructor.")
+		if err != nil {
+			return nil, err
+		}
+		
+		var params []string
+		if !p.check(RPAR) {
+			for {
+				param, err := p.consume(IDENTIFIER, "Expect parameter name.")
+				if err != nil {
+					return nil, err
+				}
+				params = append(params, param.Lexeme)
+				if !p.match(COMMA) {
+					break
+				}
+			}
+		}
+		
+		_, err = p.consume(RPAR, "Expect ')' after parameters.")
+		if err != nil {
+			return nil, err
+		}
+		
+		_, err = p.consume(ARROW, "Expect '->' after pattern.")
+		if err != nil {
+			return nil, err
+		}
+		
+		body, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		
+		// Create pattern expression
+		pattern := &Union{Constructor: constructor.Lexeme, Value: &Variable{Name: Token{Lexeme: strings.Join(params, " ")}, Line: constructor.Line}, Line: constructor.Line}
+		cases = append(cases, MatchCase{Pattern: pattern, Body: body})
+	}
+	
+	_, err = p.consume(RBRAC, "Expect '}' after match cases.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Match{Value: value, Cases: cases, Line: line}, nil
+}
+
+// handleExpression → "handle" identifier "(" expression "," expression ")"
+func (p *Parser) handleExpression() (Expr, error) {
+	line := p.previous().Line
+	
+	effect, err := p.consume(IDENTIFIER, "Expect effect name after 'handle'.")
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(LPAR, "Expect '(' after effect name.")
+	if err != nil {
+		return nil, err
+	}
+	
+	handler, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(COMMA, "Expect ',' after handler.")
+	if err != nil {
+		return nil, err
+	}
+	
+	fallback, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	
+	_, err = p.consume(RPAR, "Expect ')' after fallback.")
+	if err != nil {
+		return nil, err
+	}
+	
+	return &Handle{Effect: effect.Lexeme, Handler: handler, Fallback: fallback, Line: line}, nil
 }

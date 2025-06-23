@@ -196,7 +196,14 @@ func (ap *AstPrinter) VisitLambda(expr *Lambda) Value {
 func (ap *AstPrinter) VisitMatch(expr *Match) Value {
 	var cases []string
 	for _, c := range expr.Cases {
-		cases = append(cases, fmt.Sprintf("(case %s %s)", c.Pattern.Accept(ap).(StringValue).Val, c.Body.Accept(ap).(StringValue).Val))
+		// Special handling for patterns - convert Union to pattern format
+		var patternStr string
+		if union, ok := c.Pattern.(*Union); ok {
+			patternStr = fmt.Sprintf("(pattern %s %s)", union.Constructor, union.Value.Accept(ap).(StringValue).Val)
+		} else {
+			patternStr = c.Pattern.Accept(ap).(StringValue).Val
+		}
+		cases = append(cases, fmt.Sprintf("(case %s %s)", patternStr, c.Body.Accept(ap).(StringValue).Val))
 	}
 	return StringValue{Val: fmt.Sprintf("(match %s %s)", expr.Value.Accept(ap).(StringValue).Val, strings.Join(cases, " "))}
 }
