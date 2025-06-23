@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"time"
 )
 
 // Scope represents a variable scope with optional parent scope
@@ -353,8 +354,26 @@ func (e *Evaluator) VisitForStatement(expr *ForStatement) Value {
 }
 
 func (e *Evaluator) VisitCallExpr(expr *Call) Value {
-	// For now, we'll just return an error since we don't have functions yet
-	return ErrorValue{Message: "Function calls not yet implemented", Line: expr.Line}
+	// Check if it's a variable reference to "clock"
+	if varExpr, ok := expr.Callee.(*Variable); ok && varExpr.Name.Lexeme == "clock" {
+		// Check that clock() is called with no arguments
+		if len(expr.Arguments) != 0 {
+			return ErrorValue{Message: "clock() takes no arguments", Line: expr.Line}
+		}
+		
+		// Return current time in epoch seconds
+		epochSeconds := float64(time.Now().Unix())
+		return NumberValue{Val: epochSeconds}
+	}
+
+	// Evaluate the callee for other function calls
+	callee := e.Evaluate(expr.Callee)
+	if _, isError := callee.(ErrorValue); isError {
+		return callee
+	}
+
+	// Any other function call is an error
+	return ErrorValue{Message: "Undefined function", Line: expr.Line}
 }
 
 // isTruthy determines the truthiness of a value following Lox rules

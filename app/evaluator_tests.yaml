@@ -232,3 +232,7 @@ evaluator_tests:
       0
       1
       2
+  - name: "Clock"
+    input: |
+      clock() > 0
+    expected: "true"
