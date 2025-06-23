@@ -1,4 +1,0 @@
-LEFT_PAREN ( null
-SLASH / null
-RIGHT_PAREN ) null
-EOF  null

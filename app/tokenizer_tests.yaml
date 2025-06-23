@@ -1,0 +1,121 @@
+tokenizer_tests:
+  - name: "Parens"
+    input: "(())"
+    expected: |
+      LEFT_PAREN ( null
+      LEFT_PAREN ( null
+      RIGHT_PAREN ) null
+      RIGHT_PAREN ) null
+      EOF  null
+
+  - name: "Braces"
+    input: "{{}}"
+    expected: |
+      LEFT_BRACE { null
+      LEFT_BRACE { null
+      RIGHT_BRACE } null
+      RIGHT_BRACE } null
+      EOF  null
+
+  - name: "Ops"
+    input: "({*.,+-;})"
+    expected: |
+      LEFT_PAREN ( null
+      LEFT_BRACE { null
+      STAR * null
+      DOT . null
+      COMMA , null
+      PLUS + null
+      MINUS - null
+      SEMICOLON ; null
+      RIGHT_BRACE } null
+      RIGHT_PAREN ) null
+      EOF  null
+
+  - name: "Compare"
+    input: "(!=) == (<=) >= (<) >"
+    expected: |
+      LEFT_PAREN ( null
+      BANG_EQUAL != null
+      RIGHT_PAREN ) null
+      EQUAL_EQUAL == null
+      LEFT_PAREN ( null
+      LESS_EQUAL <= null
+      RIGHT_PAREN ) null
+      GREATER_EQUAL >= null
+      LEFT_PAREN ( null
+      LESS < null
+      RIGHT_PAREN ) null
+      GREATER > null
+      EOF  null
+
+  - name: "SlashComment"
+    input: "(/)//())"
+    expected: |
+      LEFT_PAREN ( null
+      SLASH / null
+      RIGHT_PAREN ) null
+      EOF  null
+
+  - name: "TabsSpaces"
+    input: "( ){\t}"
+    expected: |
+      LEFT_PAREN ( null
+      RIGHT_PAREN ) null
+      LEFT_BRACE { null
+      RIGHT_BRACE } null
+      EOF  null
+
+  - name: "MultiLine"
+    input: "(\n)"
+    expected: |
+      LEFT_PAREN ( null
+      RIGHT_PAREN ) null
+      EOF  null
+
+  - name: "StringLit"
+    input: '( "Hello World" )'
+    expected: |
+      LEFT_PAREN ( null
+      STRING "Hello World" Hello World
+      RIGHT_PAREN ) null
+      EOF  null
+
+  - name: "NumberLit"
+    input: "42 3.14 0.5 1757.7378"
+    expected: |
+      NUMBER 42 42.0
+      NUMBER 3.14 3.14
+      NUMBER 0.5 0.5
+      NUMBER 1757.7378 1757.7378
+      EOF  null
+
+  - name: "Identifier"
+    input: "foo_bar a b _"
+    expected: |
+      IDENTIFIER foo_bar null
+      IDENTIFIER a null
+      IDENTIFIER b null
+      IDENTIFIER _ null
+      EOF  null
+
+  - name: "Keywords"
+    input: "and class else false for fun if nil or print return super this true var while"
+    expected: |
+      AND and null
+      CLASS class null
+      ELSE else null
+      FALSE false null
+      FOR for null
+      FUN fun null
+      IF if null
+      NIL nil null
+      OR or null
+      PRINT print null
+      RETURN return null
+      SUPER super null
+      THIS this null
+      TRUE true null
+      VAR var null
+      WHILE while null
+      EOF  null

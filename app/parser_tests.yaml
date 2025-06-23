@@ -1,0 +1,76 @@
+parser_tests:
+  - name: "Number"
+    input: "42"
+    expected: "42.0"
+
+  - name: "String"
+    input: '"hello"'
+    expected: "hello"
+
+  - name: "Boolean"
+    input: "true"
+    expected: "true"
+
+  - name: "Nil"
+    input: "nil"
+    expected: "nil"
+
+  - name: "Addition"
+    input: "2 + 3"
+    expected: "(+ 2.0 3.0)"
+
+  - name: "Subtraction"
+    input: "5 - 2"
+    expected: "(- 5.0 2.0)"
+
+  - name: "Multiplication"
+    input: "4 * 6"
+    expected: "(* 4.0 6.0)"
+
+  - name: "Division"
+    input: "8 / 2"
+    expected: "(/ 8.0 2.0)"
+
+  - name: "Comparison"
+    input: "3 < 5"
+    expected: "(< 3.0 5.0)"
+
+  - name: "Equality"
+    input: "1 == 1"
+    expected: "(== 1.0 1.0)"
+
+  - name: "Inequality"
+    input: "1 != 2"
+    expected: "(!= 1.0 2.0)"
+
+  - name: "UnaryMinus"
+    input: "-42"
+    expected: "(- 42.0)"
+
+  - name: "UnaryBang"
+    input: "!true"
+    expected: "(! true)"
+
+  - name: "Grouping"
+    input: "(2 + 3)"
+    expected: "(group (+ 2.0 3.0))"
+
+  - name: "ComplexExpression"
+    input: "2 + 3 * 4"
+    expected: "(+ 2.0 (* 3.0 4.0))"
+
+  - name: "GroupedExpression"
+    input: "(2 + 3) * 4"
+    expected: "(* (group (+ 2.0 3.0)) 4.0)"
+
+  - name: "NestedGrouping"
+    input: "((1 + 2) * 3)"
+    expected: "(group (* (group (+ 1.0 2.0)) 3.0))"
+
+  - name: "MixedTypes"
+    input: '"hello" == "world"'
+    expected: "(== hello world)"
+
+  - name: "FloatNumbers"
+    input: "3.14 + 2.71"
+    expected: "(+ 3.14 2.71)"

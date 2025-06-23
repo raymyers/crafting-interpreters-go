@@ -1,8 +1,10 @@
 package main
 
 import (
-	approvals "github.com/approvals/go-approval-tests"
+	"os"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func parseToString(input string) string {
@@ -21,40 +23,45 @@ func parseToString(input string) string {
 	return printer.Print(expr)
 }
 
-type ParserTestCaseParameters struct {
-	name  string
-	value string
+type ParserTestCase struct {
+	Name     string `yaml:"name"`
+	Input    string `yaml:"input"`
+	Expected string `yaml:"expected"`
 }
 
-var ParserParameterizedTestcases = []ParserTestCaseParameters{
-	{name: "Number", value: "42"},
-	{name: "String", value: `"hello"`},
-	{name: "Boolean", value: "true"},
-	{name: "Nil", value: "nil"},
-	{name: "Addition", value: "2 + 3"},
-	{name: "Subtraction", value: "5 - 2"},
-	{name: "Multiplication", value: "4 * 6"},
-	{name: "Division", value: "8 / 2"},
-	{name: "Comparison", value: "3 < 5"},
-	{name: "Equality", value: "1 == 1"},
-	{name: "Inequality", value: "1 != 2"},
-	{name: "UnaryMinus", value: "-42"},
-	{name: "UnaryBang", value: "!true"},
-	{name: "Grouping", value: "(2 + 3)"},
-	{name: "ComplexExpression", value: "2 + 3 * 4"},
-	{name: "GroupedExpression", value: "(2 + 3) * 4"},
-	{name: "NestedGrouping", value: "((1 + 2) * 3)"},
-	{name: "MixedTypes", value: `"hello" == "world"`},
-	{name: "FloatNumbers", value: "3.14 + 2.71"},
+type ParserTestSuite struct {
+	Tests []ParserTestCase `yaml:"parser_tests"`
+}
+
+func loadParserTests() ([]ParserTestCase, error) {
+	data, err := os.ReadFile("parser_tests.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	var suite ParserTestSuite
+	err = yaml.Unmarshal(data, &suite)
+	if err != nil {
+		return nil, err
+	}
+
+	return suite.Tests, nil
 }
 
 func TestParserCases(t *testing.T) {
-	for _, tc := range ParserParameterizedTestcases {
+	testCases, err := loadParserTests()
+	if err != nil {
+		t.Fatalf("Failed to load test cases: %v", err)
+	}
+
+	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			result := parseToString(tc.value)
-			approvals.VerifyString(t, result)
+			result := parseToString(tc.Input)
+			if result != tc.Expected {
+				t.Errorf("Test %s failed:\nExpected: %s\nGot: %s", tc.Name, tc.Expected, result)
+			}
 		})
 	}
 }

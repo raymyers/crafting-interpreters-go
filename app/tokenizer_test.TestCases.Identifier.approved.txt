@@ -1,5 +1,0 @@
-IDENTIFIER foo_bar null
-IDENTIFIER a null
-IDENTIFIER b null
-IDENTIFIER _ null
-EOF  null

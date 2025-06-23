@@ -1,3 +1,0 @@
-LEFT_PAREN ( null
-RIGHT_PAREN ) null
-EOF  null

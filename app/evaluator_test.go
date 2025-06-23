@@ -1,7 +1,10 @@
 package main
 
 import (
+	"os"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func evaluateToString(input string) string {
@@ -25,54 +28,44 @@ func evaluateToString(input string) string {
 	return formatValue(result)
 }
 
-type EvaluatorTestCaseParameters struct {
-	name     string
-	value    string
-	expected string
+type EvaluatorTestCase struct {
+	Name     string `yaml:"name"`
+	Input    string `yaml:"input"`
+	Expected string `yaml:"expected"`
 }
 
-var EvaluatorParameterizedTestcases = []EvaluatorTestCaseParameters{
-	{name: "Number", value: "42", expected: "42"},
-	{name: "String", value: `"hello"`, expected: "hello"},
-	{name: "Boolean", value: "true", expected: "true"},
-	{name: "Nil", value: "nil", expected: "nil"},
-	{name: "Addition", value: "2 + 3", expected: "5"},
-	{name: "Subtraction", value: "5 - 2", expected: "3"},
-	{name: "Multiplication", value: "4 * 6", expected: "24"},
-	{name: "Division", value: "8 / 2", expected: "4"},
-	{name: "LessThan", value: "3 < 5", expected: "true"},
-	{name: "LessThanOrEqual", value: "7 <= 5", expected: "false"},
-	{name: "GreaterThan", value: "5 > 3", expected: "true"},
-	{name: "GreaterThanOrEqual", value: "5 >= 3", expected: "true"},
-	{name: "Equality", value: "1 == 1", expected: "true"},
-	{name: "Inequality", value: "1 != 2", expected: "true"},
-	{name: "UnaryMinus", value: "-42", expected: "-42"},
-	{name: "UnaryMinusFloat", value: "-73", expected: "-73"},
-	{name: "UnaryBang", value: "!true", expected: "false"},
-	{name: "UnaryBangFloat", value: "!10.40", expected: "false"},
-	{name: "UnaryBangGrouped", value: "!((false))", expected: "true"},
-	{name: "Grouping", value: "(2 + 3)", expected: "5"},
-	{name: "ComplexExpression", value: "2 + 3 * 4", expected: "14"},
-	{name: "GroupedExpression", value: "(2 + 3) * 4", expected: "20"},
-	{name: "NestedGrouping", value: "((1 + 2) * 3)", expected: "9"},
-	{name: "MixedTypes", value: `"hello" == "world"`, expected: "false"},
-	{name: "FloatNumbers", value: "3.14 + 2.71", expected: "5.85"},
-	{name: "GroupedString", value: `( "hello" )`, expected: "hello"},
-	{name: "StringConcat", value: `"hel" + "lo"`, expected: "hello"},
-	{name: "StringEqTrue", value: `"hello" == "hello"`, expected: "true"},
-	{name: "StringNeqTrue", value: `"hello" != "world"`, expected: "true"},
-	{name: "StringEqFalse", value: `"hello" == "world"`, expected: "false"},
-	{name: "StringNeqFalse", value: `"hello" != "hello"`, expected: "false"},
+type EvaluatorTestSuite struct {
+	Tests []EvaluatorTestCase `yaml:"evaluator_tests"`
+}
+
+func loadEvaluatorTests() ([]EvaluatorTestCase, error) {
+	data, err := os.ReadFile("evaluator_tests.yaml")
+	if err != nil {
+		return nil, err
+	}
+
+	var suite EvaluatorTestSuite
+	err = yaml.Unmarshal(data, &suite)
+	if err != nil {
+		return nil, err
+	}
+
+	return suite.Tests, nil
 }
 
 func TestEvaluatorCases(t *testing.T) {
-	for _, tc := range EvaluatorParameterizedTestcases {
+	testCases, err := loadEvaluatorTests()
+	if err != nil {
+		t.Fatalf("Failed to load test cases: %v", err)
+	}
+
+	for _, tc := range testCases {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			result := evaluateToString(tc.value)
-			if result != tc.expected {
-				t.Errorf("Test %s failed: expected %q, got %q", tc.name, tc.expected, result)
+			result := evaluateToString(tc.Input)
+			if result != tc.Expected {
+				t.Errorf("Test %s failed: expected %q, got %q", tc.Name, tc.Expected, result)
 			}
 		})
 	}
