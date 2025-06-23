@@ -359,53 +359,6 @@ func (e *Evaluator) VisitIfStatement(expr *IfStatement) Value {
 	return NilValue{}
 }
 
-func (e *Evaluator) VisitWhileStatement(expr *WhileStatement) Value {
-	for {
-		conditionValue := e.Evaluate(expr.Condition)
-		if _, isError := conditionValue.(ErrorValue); isError {
-			return conditionValue
-		}
-
-		if !isTruthy(conditionValue) {
-			break
-		}
-
-		bodyResult := e.Evaluate(expr.Body)
-		if _, isError := bodyResult.(ErrorValue); isError {
-			return bodyResult
-		}
-	}
-
-	return NilValue{}
-}
-
-func (e *Evaluator) VisitForStatement(expr *ForStatement) Value {
-	if nil != expr.Initializer {
-		_ = e.Evaluate(expr.Initializer)
-	}
-	for {
-
-		conditionValue := e.Evaluate(expr.Condition)
-		if _, isError := conditionValue.(ErrorValue); isError {
-			return conditionValue
-		}
-
-		if !isTruthy(conditionValue) {
-			break
-		}
-
-		bodyResult := e.Evaluate(expr.Body)
-		if _, isError := bodyResult.(ErrorValue); isError {
-			return bodyResult
-		}
-		if nil != expr.Increment {
-			_ = e.Evaluate(expr.Increment)
-		}
-	}
-
-	return NilValue{}
-}
-
 func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 	// Check if it's a variable reference to "clock"
 	if varExpr, ok := expr.Callee.(*Variable); ok && varExpr.Name.Lexeme == "clock" {
@@ -630,7 +583,7 @@ func isEqual(left, right Value) bool {
 // Placeholder implementations for new EYG visitor methods
 func (e *Evaluator) VisitRecord(expr *Record) Value {
 	fields := make(map[string]Value)
-	
+
 	// First pass: process all spread fields
 	for _, field := range expr.Fields {
 		if field.Name == "" {
@@ -641,7 +594,7 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 				if _, ev := spreadValue.(ErrorValue); ev {
 					return spreadValue
 				}
-				
+
 				// Spread must be a record
 				if record, ok := spreadValue.(RecordValue); ok {
 					// Add all fields from the spread record
@@ -654,7 +607,7 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 			}
 		}
 	}
-	
+
 	// Second pass: process explicit fields (these override spread fields)
 	for _, field := range expr.Fields {
 		if field.Name != "" {
@@ -666,7 +619,7 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 			fields[field.Name] = value
 		}
 	}
-	
+
 	return RecordValue{Fields: fields}
 }
 
@@ -704,14 +657,14 @@ func (e *Evaluator) VisitAccess(expr *Access) Value {
 	if _, ev := object.(ErrorValue); ev {
 		return object
 	}
-	
+
 	if record, ok := object.(RecordValue); ok {
 		if value, exists := record.Fields[expr.Name]; exists {
 			return value
 		}
 		return ErrorValue{Message: "Undefined property '" + expr.Name + "'", Line: expr.Line}
 	}
-	
+
 	return ErrorValue{Message: "Only records have properties", Line: expr.Line}
 }
 
@@ -721,7 +674,7 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 		if len(expr.Arguments) != 3 {
 			return ErrorValue{Message: "list_fold expects 3 arguments", Line: expr.Line}
 		}
-		
+
 		// Evaluate list
 		listValue := e.Evaluate(expr.Arguments[0])
 		if _, ev := listValue.(ErrorValue); ev {
@@ -731,13 +684,13 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 		if !ok {
 			return ErrorValue{Message: "First argument to list_fold must be a list", Line: expr.Line}
 		}
-		
+
 		// Evaluate initial value
 		accumulator := e.Evaluate(expr.Arguments[1])
 		if _, ev := accumulator.(ErrorValue); ev {
 			return accumulator
 		}
-		
+
 		// Evaluate function
 		funcValue := e.Evaluate(expr.Arguments[2])
 		if _, ev := funcValue.(ErrorValue); ev {
@@ -747,13 +700,13 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 		if !ok {
 			return ErrorValue{Message: "Third argument to list_fold must be a function", Line: expr.Line}
 		}
-		
+
 		// Fold over the list
 		for _, element := range list.Elements {
 			// Call lambda with accumulator and element
 			previousScope := e.scope
 			e.scope = NewScope(lambda.Closure)
-			
+
 			// Bind parameters
 			if len(lambda.Parameters) != 2 {
 				e.scope = previousScope
@@ -761,24 +714,24 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 			}
 			e.scope.define(lambda.Parameters[0], accumulator)
 			e.scope.define(lambda.Parameters[1], element)
-			
+
 			// Execute lambda body
 			result := e.Evaluate(lambda.Body)
 			e.scope = previousScope
-			
+
 			if _, ev := result.(ErrorValue); ev {
 				return result
 			}
 			accumulator = result
 		}
-		
+
 		return accumulator
-		
+
 	case "int_parse":
 		if len(expr.Arguments) != 1 {
 			return ErrorValue{Message: "int_parse expects 1 argument", Line: expr.Line}
 		}
-		
+
 		// Evaluate string argument
 		strValue := e.Evaluate(expr.Arguments[0])
 		if _, ev := strValue.(ErrorValue); ev {
@@ -788,33 +741,33 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 		if !ok {
 			return ErrorValue{Message: "int_parse expects a string argument", Line: expr.Line}
 		}
-		
+
 		// Parse the string to integer
 		if val, err := strconv.ParseFloat(str.Val, 64); err == nil {
 			return NumberValue{Val: val}
 		} else {
 			return ErrorValue{Message: "Cannot parse string as integer", Line: expr.Line}
 		}
-		
+
 	case "clock":
 		if len(expr.Arguments) != 1 {
 			return ErrorValue{Message: "clock expects 1 argument (empty record)", Line: expr.Line}
 		}
-		
+
 		// Evaluate the argument (should be an empty record)
 		argValue := e.Evaluate(expr.Arguments[0])
 		if _, ev := argValue.(ErrorValue); ev {
 			return argValue
 		}
-		
+
 		// Check if it's an empty record (NilValue)
 		if _, ok := argValue.(NilValue); !ok {
 			return ErrorValue{Message: "clock expects an empty record argument", Line: expr.Line}
 		}
-		
+
 		epochSeconds := float64(time.Now().Unix())
 		return NumberValue{Val: epochSeconds}
-		
+
 	default:
 		return ErrorValue{Message: fmt.Sprintf("Unknown builtin function: %s", expr.Name), Line: expr.Line}
 	}
@@ -855,18 +808,18 @@ func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
 		// Use LambdaValue to represent the builtin function
 		containsFunc := LambdaValue{
 			Parameters: []string{"list", "item"},
-			Body: nil, // Special marker for builtin
-			Closure: nil,
+			Body:       nil, // Special marker for builtin
+			Closure:    nil,
 			Builtin: func(args []Value) Value {
 				if len(args) != 2 {
 					return ErrorValue{Message: "contains expects 2 arguments", Line: expr.Line}
 				}
-				
+
 				list, ok := args[0].(ListValue)
 				if !ok {
 					return falseValue()
 				}
-				
+
 				target := args[1]
 				for _, elem := range list.Elements {
 					if valuesEqual(elem, target) {
@@ -876,20 +829,20 @@ func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
 				return falseValue()
 			},
 		}
-		
+
 		listRecord := RecordValue{
 			Fields: map[string]Value{
 				"contains": containsFunc,
 			},
 		}
-		
+
 		return RecordValue{
 			Fields: map[string]Value{
 				"list": listRecord,
 			},
 		}
 	}
-	
+
 	return ErrorValue{Message: fmt.Sprintf("Unknown named reference @%s:%d", expr.Module, expr.Index), Line: expr.Line}
 }
 

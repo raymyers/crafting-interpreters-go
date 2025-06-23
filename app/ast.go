@@ -89,8 +89,6 @@ type ExprVisitor interface {
 	VisitVarStatement(expr *VarStatement) Value
 	VisitBlock(expr *Block) Value
 	VisitIfStatement(expr *IfStatement) Value
-	VisitWhileStatement(expr *WhileStatement) Value
-	VisitForStatement(expr *ForStatement) Value
 	VisitCallExpr(expr *Call) Value
 	VisitFun(expr *Fun) Value
 	VisitRecord(expr *Record) Value
@@ -213,29 +211,6 @@ type IfStatement struct {
 
 func (i *IfStatement) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitIfStatement(i)
-}
-
-// WhileStatement represents a while loop (e.g., while (condition) { body })
-type WhileStatement struct {
-	Condition Expr
-	Body      Expr
-	Line      uint
-}
-
-func (w *WhileStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitWhileStatement(w)
-}
-
-type ForStatement struct {
-	Initializer Expr
-	Condition   Expr
-	Increment   Expr
-	Body        Expr
-	Line        uint
-}
-
-func (w *ForStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitForStatement(w)
 }
 
 // Call represents a function call expression (e.g., foo(1, 2, 3))

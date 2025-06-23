@@ -43,7 +43,6 @@ const (
 	CLASS
 	ELSE
 	FALSE
-	FOR
 	FUN
 	IF
 	NIL
@@ -53,8 +52,6 @@ const (
 	SUPER
 	THIS
 	TRUE
-	VAR
-	WHILE
 	MATCH
 	PERFORM
 	HANDLE
@@ -98,7 +95,6 @@ var tokenTypeName = map[TokenType]string{
 	CLASS:         "CLASS",
 	ELSE:          "ELSE",
 	FALSE:         "FALSE",
-	FOR:           "FOR",
 	FUN:           "FUN",
 	IF:            "IF",
 	NIL:           "NIL",
@@ -108,8 +104,6 @@ var tokenTypeName = map[TokenType]string{
 	SUPER:         "SUPER",
 	THIS:          "THIS",
 	TRUE:          "TRUE",
-	VAR:           "VAR",
-	WHILE:         "WHILE",
 	MATCH:         "MATCH",
 	PERFORM:       "PERFORM",
 	HANDLE:        "HANDLE",

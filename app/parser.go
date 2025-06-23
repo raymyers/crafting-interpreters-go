@@ -43,14 +43,14 @@ func (p *Parser) assignment() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Check if left side is a record pattern for destructuring
 		if record, ok := expr.(*Record); ok {
 			// Convert record to destructure pattern
 			destructure := &Destructure{Fields: record.Fields, Line: record.Line}
 			return &Binary{Left: destructure, Operator: operator, Right: right, Line: operator.Line}, nil
 		}
-		
+
 		return &Binary{Left: expr, Operator: operator, Right: right, Line: operator.Line}, nil
 	}
 
@@ -205,7 +205,7 @@ func (p *Parser) unary() (Expr, error) {
 			return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
 		}
 	}
-	
+
 	if p.match(MINUS) {
 		operator := p.previous()
 		right, err := p.unary()
@@ -372,31 +372,9 @@ func (p *Parser) primary() (Expr, error) {
 
 		return &PrintStatement{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
-	if p.match(VAR) {
-		if !p.match(IDENTIFIER) {
-			return nil, fmt.Errorf("expect identifier")
-		}
-		varName := p.previous().Lexeme
-		if !p.match(EQUAL) {
-			return &VarStatement{name: varName, Expression: &Literal{Value: NilValue{}, Line: p.previous().Line}, Line: p.tokens[p.current-2].Line}, nil
-		}
-		expr, err := p.expression()
-		if err != nil {
-			return nil, err
-		}
-
-		return &VarStatement{name: varName, Expression: expr, Line: p.tokens[p.current-2].Line}, nil
-	}
 
 	if p.match(IF) {
 		return p.ifStatement()
-	}
-
-	if p.match(WHILE) {
-		return p.whileStatement()
-	}
-	if p.match(FOR) {
-		return p.forStatement()
 	}
 
 	if p.match(IDENTIFIER) {
@@ -407,31 +385,31 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(LBRAC) {
 		return p.recordOrBlock()
 	}
-	
+
 	if p.match(LEFT_BRACKET) {
 		return p.listExpression()
 	}
-	
+
 	if p.match(PIPE) {
 		return p.lambda()
 	}
-	
+
 	if p.match(AT) {
 		return p.namedRef()
 	}
-	
+
 	if p.match(PERFORM) {
 		return p.performExpression()
 	}
-	
+
 	if p.match(MATCH) {
 		return p.matchExpression()
 	}
-	
+
 	if p.match(HANDLE) {
 		return p.handleExpression()
 	}
-	
+
 	if p.match(FUN) {
 		return p.funStatement()
 	}
@@ -546,92 +524,6 @@ func (p *Parser) ifStatement() (Expr, error) {
 	}, nil
 }
 
-// whileStatement → "while" "(" expression ")" expression
-func (p *Parser) whileStatement() (Expr, error) {
-	line := p.previous().Line
-
-	_, err := p.consume(LPAR, "Expect '(' after 'while'.")
-	if err != nil {
-		return nil, err
-	}
-
-	condition, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = p.consume(RPAR, "Expect ')' after while condition.")
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-
-	return &WhileStatement{
-		Condition: condition,
-		Body:      body,
-		Line:      line,
-	}, nil
-}
-
-// forStatement → "for" "(" expression ";" expression ";" expression ")" expression
-func (p *Parser) forStatement() (Expr, error) {
-	line := p.previous().Line
-
-	_, err := p.consume(LPAR, "Expect '(' after 'for'.")
-	if err != nil {
-		return nil, err
-	}
-	if p.check(LBRAC) {
-		return nil, fmt.Errorf("can't use block as for initializer")
-	}
-	// Optional
-	initializer, _ := p.expression()
-
-	_, err = p.consume(SEMICOLON, "Expect ';' after for initializer.")
-	if err != nil {
-		return nil, err
-	}
-	if p.check(LBRAC) {
-		return nil, fmt.Errorf("can't use block as for condition")
-	}
-	// Optional
-	condition, _ := p.expression()
-
-	_, err = p.consume(SEMICOLON, "expect ';' after for condition.")
-	if err != nil {
-		return nil, err
-	}
-	if p.check(LBRAC) {
-		return nil, fmt.Errorf("can't use block as for increment")
-	}
-	// Optional
-	increment, _ := p.expression()
-
-	_, err = p.consume(RPAR, "Expect ')' after for condition.")
-	if err != nil {
-		return nil, err
-	}
-	if p.check(VAR) {
-		return nil, fmt.Errorf("can't declare var as single statement in for")
-	}
-	body, err := p.expression()
-	if err != nil {
-		return nil, err
-	}
-
-	return &ForStatement{
-		Initializer: initializer,
-		Condition:   condition,
-		Increment:   increment,
-		Body:        body,
-		Line:        line,
-	}, nil
-}
-
 // Helper methods
 
 func (p *Parser) match(types ...TokenType) bool {
@@ -680,27 +572,27 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 // recordOrBlock determines if {} is an empty record or a block based on content
 func (p *Parser) recordOrBlock() (Expr, error) {
 	line := p.previous().Line
-	
+
 	// Check if it's empty {}
 	if p.check(RBRAC) {
 		p.advance() // consume }
 		return &EmptyRecord{Line: line}, nil
 	}
-	
+
 	// Look ahead to see if this looks like a record (has : after identifier)
 	saved := p.current
 	isRecord := false
-	
+
 	if p.check(IDENTIFIER) {
 		p.advance()
 		if p.check(COLON) {
 			isRecord = true
 		}
 	}
-	
+
 	// Restore position
 	p.current = saved
-	
+
 	if isRecord {
 		return p.recordStatement()
 	} else {
@@ -712,7 +604,7 @@ func (p *Parser) recordOrBlock() (Expr, error) {
 func (p *Parser) recordStatement() (Expr, error) {
 	line := p.previous().Line
 	var fields []RecordField
-	
+
 	for !p.check(RBRAC) && !p.isAtEnd() {
 		// Check for spread syntax
 		if p.match(DOT_DOT) {
@@ -721,7 +613,7 @@ func (p *Parser) recordStatement() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			// Add spread as a special field with empty name
 			fields = append(fields, RecordField{Name: "", Value: &Spread{Expression: expr, Line: p.previous().Line}})
 		} else {
@@ -729,30 +621,30 @@ func (p *Parser) recordStatement() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			
+
 			_, err = p.consume(COLON, "Expect ':' after field name.")
 			if err != nil {
 				return nil, err
 			}
-			
+
 			value, err := p.expression()
 			if err != nil {
 				return nil, err
 			}
-			
+
 			fields = append(fields, RecordField{Name: name.Lexeme, Value: value})
 		}
-		
+
 		if !p.match(COMMA) {
 			break
 		}
 	}
-	
+
 	_, err := p.consume(RBRAC, "Expect '}' after record.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Record{Fields: fields, Line: line}, nil
 }
 
@@ -760,7 +652,7 @@ func (p *Parser) recordStatement() (Expr, error) {
 func (p *Parser) listExpression() (Expr, error) {
 	line := p.previous().Line
 	var elements []Expr
-	
+
 	if !p.check(RIGHT_BRACKET) {
 		for {
 			// Check for spread operator
@@ -777,52 +669,52 @@ func (p *Parser) listExpression() (Expr, error) {
 				}
 				elements = append(elements, expr)
 			}
-			
+
 			if !p.match(COMMA) {
 				break
 			}
 		}
 	}
-	
+
 	_, err := p.consume(RIGHT_BRACKET, "Expect ']' after list elements.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &List{Elements: elements, Line: line}, nil
 }
 
 // namedRef → "@" identifier ":" number
 func (p *Parser) namedRef() (Expr, error) {
 	line := p.previous().Line
-	
+
 	module, err := p.consume(IDENTIFIER, "Expect module name after '@'.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(COLON, "Expect ':' after module name.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	indexToken, err := p.consume(NUMBER, "Expect number after ':'.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	index, err := strconv.Atoi(indexToken.Lexeme)
 	if err != nil {
 		return nil, fmt.Errorf("invalid index: %s", indexToken.Lexeme)
 	}
-	
+
 	return &NamedRef{Module: module.Lexeme, Index: index, Line: line}, nil
 }
 
 // lambda → "|" parameters "|" expression
 func (p *Parser) lambda() (Expr, error) {
 	line := p.previous().Line
-	
+
 	var parameters []string
 	if !p.check(PIPE) {
 		for {
@@ -836,41 +728,41 @@ func (p *Parser) lambda() (Expr, error) {
 			}
 		}
 	}
-	
+
 	_, err := p.consume(PIPE, "Expect '|' after parameters.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	body, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// If the body is a block with a single expression, unwrap it
 	if block, ok := body.(*Block); ok && len(block.Statements) == 1 {
 		if expr, ok := block.Statements[0].(Expr); ok {
 			body = expr
 		}
 	}
-	
+
 	return &Lambda{Parameters: parameters, Body: body, Line: line}, nil
 }
 
 // performExpression → "perform" identifier "(" arguments ")"
 func (p *Parser) performExpression() (Expr, error) {
 	line := p.previous().Line
-	
+
 	effect, err := p.consume(IDENTIFIER, "Expect effect name after 'perform'.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(LPAR, "Expect '(' after effect name.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var arguments []Expr
 	if !p.check(RPAR) {
 		for {
@@ -884,29 +776,29 @@ func (p *Parser) performExpression() (Expr, error) {
 			}
 		}
 	}
-	
+
 	_, err = p.consume(RPAR, "Expect ')' after arguments.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Perform{Effect: effect.Lexeme, Arguments: arguments, Line: line}, nil
 }
 
 // matchExpression → "match" expression "{" matchCase* "}"
 func (p *Parser) matchExpression() (Expr, error) {
 	line := p.previous().Line
-	
+
 	value, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(LBRAC, "Expect '{' after match value.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var cases []MatchCase
 	for !p.check(RBRAC) && !p.isAtEnd() {
 		// Parse pattern: Constructor(params) or Constructor(_)
@@ -914,12 +806,12 @@ func (p *Parser) matchExpression() (Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		
+
 		_, err = p.consume(LPAR, "Expect '(' after constructor.")
 		if err != nil {
 			return nil, err
 		}
-		
+
 		var params []string
 		if !p.check(RPAR) {
 			for {
@@ -933,68 +825,68 @@ func (p *Parser) matchExpression() (Expr, error) {
 				}
 			}
 		}
-		
+
 		_, err = p.consume(RPAR, "Expect ')' after parameters.")
 		if err != nil {
 			return nil, err
 		}
-		
+
 		_, err = p.consume(ARROW, "Expect '->' after pattern.")
 		if err != nil {
 			return nil, err
 		}
-		
+
 		body, err := p.expression()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		// Create pattern expression
 		pattern := &Union{Constructor: constructor.Lexeme, Value: &Variable{Name: Token{Lexeme: strings.Join(params, " ")}, Line: constructor.Line}, Line: constructor.Line}
 		cases = append(cases, MatchCase{Pattern: pattern, Body: body})
 	}
-	
+
 	_, err = p.consume(RBRAC, "Expect '}' after match cases.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Match{Value: value, Cases: cases, Line: line}, nil
 }
 
 // handleExpression → "handle" identifier "(" expression "," expression ")"
 func (p *Parser) handleExpression() (Expr, error) {
 	line := p.previous().Line
-	
+
 	effect, err := p.consume(IDENTIFIER, "Expect effect name after 'handle'.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(LPAR, "Expect '(' after effect name.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	handler, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(COMMA, "Expect ',' after handler.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	fallback, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(RPAR, "Expect ')' after fallback.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Handle{Effect: effect.Lexeme, Handler: handler, Fallback: fallback, Line: line}, nil
 }

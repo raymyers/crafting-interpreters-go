@@ -354,8 +354,6 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return ELSE
 	case "false":
 		return FALSE
-	case "for":
-		return FOR
 	case "fun":
 		return FUN
 	case "if":
@@ -374,10 +372,6 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return THIS
 	case "true":
 		return TRUE
-	case "var":
-		return VAR
-	case "while":
-		return WHILE
 	case "match":
 		return MATCH
 	case "perform":

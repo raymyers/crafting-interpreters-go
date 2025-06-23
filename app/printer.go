@@ -93,14 +93,6 @@ func (ap *AstPrinter) VisitIfStatement(expr *IfStatement) Value {
 	return StringValue{Val: ap.parenthesize("if", expr.Condition, expr.ThenBranch)}
 }
 
-func (ap *AstPrinter) VisitWhileStatement(expr *WhileStatement) Value {
-	return StringValue{Val: ap.parenthesize("while", expr.Condition, expr.Body)}
-}
-
-func (ap *AstPrinter) VisitForStatement(expr *ForStatement) Value {
-	return StringValue{Val: ap.parenthesize("for", expr.Initializer, expr.Condition, expr.Increment, expr.Body)}
-}
-
 // VisitCallExpr prints function call expressions as (call callee arg1 arg2 ...)
 func (ap *AstPrinter) VisitCallExpr(expr *Call) Value {
 	args := append([]Expr{expr.Callee}, expr.Arguments...)
