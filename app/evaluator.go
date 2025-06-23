@@ -138,6 +138,18 @@ func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 	}
 }
 
+func (e *Evaluator) VisitStatements(expr *Statements) Value {
+	result := NilValue{}
+	for _, v := range expr.Exprs {
+		result := e.Evaluate(v)
+		switch result.(type) {
+		case ErrorValue:
+			return result
+		}
+	}
+	return result
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

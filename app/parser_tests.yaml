@@ -78,3 +78,9 @@ parser_tests:
   - name: "Print"
     input: 'print "hello"'
     expected: '(print hello)'
+
+  - name: "SeqPrints"
+    input: |
+      print "a";
+      print "b";
+    expected: '(seq (print a) (print b))'

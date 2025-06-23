@@ -21,7 +21,7 @@ func NewParser(tokens []Token) *Parser {
 
 // Parse parses the tokens into an expression
 func (p *Parser) Parse() (Expr, error) {
-	return p.expression()
+	return p.statements()
 }
 
 // expression → equality
@@ -117,6 +117,34 @@ func (p *Parser) unary() (Expr, error) {
 	}
 
 	return p.primary()
+}
+
+// statements → expression (";" expression)* | ";"
+func (p *Parser) statements() (Expr, error) {
+	var results []Expr
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	line := p.previous().Line
+	results = append(results, expr)
+	for {
+		if !p.match(SEMICOLON) {
+			break
+		}
+		expr, err := p.expression()
+
+		if err != nil {
+			break
+		}
+		results = append(results, expr)
+	}
+
+	if len(results) == 1 {
+		return results[0], nil
+	}
+	return &Statements{Exprs: results, Line: line}, nil
+
 }
 
 // primary → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | printStatement

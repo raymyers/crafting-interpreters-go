@@ -62,6 +62,10 @@ func (ap *AstPrinter) VisitPrintStatement(expr *PrintStatement) Value {
 	return StringValue{Val: ap.parenthesize("print", expr.Expression)}
 }
 
+func (ap *AstPrinter) VisitStatements(expr *Statements) Value {
+	return StringValue{Val: ap.parenthesize("seq", expr.Exprs...)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder
