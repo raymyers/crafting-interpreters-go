@@ -99,7 +99,7 @@ tokenizer_tests:
       IDENTIFIER foo_bar null
       IDENTIFIER a null
       IDENTIFIER b null
-      IDENTIFIER _ null
+      UNDERSCORE _ null
       EOF  null
 
   - name: "EygKeywords"
