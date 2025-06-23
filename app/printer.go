@@ -97,6 +97,10 @@ func (ap *AstPrinter) VisitWhileStatement(expr *WhileStatement) Value {
 	return StringValue{Val: ap.parenthesize("while", expr.Condition, expr.Body)}
 }
 
+func (ap *AstPrinter) VisitForStatement(expr *ForStatement) Value {
+	return StringValue{Val: ap.parenthesize("for", expr.Initializer, expr.Condition, expr.Increment, expr.Body)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder
@@ -106,10 +110,15 @@ func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 
 	for _, expr := range exprs {
 		builder.WriteString(" ")
-		result := expr.Accept(ap)
-		if str, ok := result.(StringValue); ok {
-			builder.WriteString(str.Val)
+		if nil == expr {
+			builder.WriteString("nil")
+		} else {
+			result := expr.Accept(ap)
+			if str, ok := result.(StringValue); ok {
+				builder.WriteString(str.Val)
+			}
 		}
+
 	}
 
 	builder.WriteString(")")

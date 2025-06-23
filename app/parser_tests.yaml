@@ -161,3 +161,11 @@ parser_tests:
         x = x + 1;
       }
     expected: '(while (< x 10.0) (block (print x) (= x (+ x 1.0))))'
+  - name: "For"
+    input: |
+      for (var baz = 0; baz < 3; baz) print baz = baz + 1;
+    expected: '(for (var baz 0.0) (< baz 3.0) baz (print (= baz (+ baz 1.0))))'
+  - name: "EmptyFor"
+    input: |
+      for (;;) {}
+    expected: '(for nil nil nil (block))'

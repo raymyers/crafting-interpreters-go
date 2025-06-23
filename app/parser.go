@@ -167,7 +167,8 @@ func (p *Parser) statements() (Expr, error) {
 
 // primary → NUMBER | STRING | "true" | "false" | "nil"
 //
-//	| "(" expression ")" | printStatement | varStatement | blockStatement | ifStatement
+//	| "(" expression ")" | printStatement | varStatement
+//	| blockStatement | ifStatement | whileStatement | forStatement
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -239,6 +240,9 @@ func (p *Parser) primary() (Expr, error) {
 
 	if p.match(WHILE) {
 		return p.whileStatement()
+	}
+	if p.match(FOR) {
+		return p.forStatement()
 	}
 
 	if p.match(IDENTIFIER) {
@@ -346,6 +350,51 @@ func (p *Parser) whileStatement() (Expr, error) {
 		Condition: condition,
 		Body:      body,
 		Line:      line,
+	}, nil
+}
+
+// forStatement → "for" "(" expression ";" expression ";" expression ")" expression
+func (p *Parser) forStatement() (Expr, error) {
+	line := p.previous().Line
+
+	_, err := p.consume(LPAR, "Expect '(' after 'for'.")
+	if err != nil {
+		return nil, err
+	}
+
+	// Optional
+	initializer, _ := p.expression()
+
+	_, err = p.consume(SEMICOLON, "Expect ';' after for initializer.")
+	if err != nil {
+		return nil, err
+	}
+	// Optional
+	condition, _ := p.expression()
+
+	_, err = p.consume(SEMICOLON, "Expect ';' after for condition.")
+	if err != nil {
+		return nil, err
+	}
+	// Optional
+	increment, _ := p.expression()
+
+	_, err = p.consume(RPAR, "Expect ')' after for condition.")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ForStatement{
+		Initializer: initializer,
+		Condition:   condition,
+		Increment:   increment,
+		Body:        body,
+		Line:        line,
 	}, nil
 }
 

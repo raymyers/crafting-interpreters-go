@@ -325,6 +325,33 @@ func (e *Evaluator) VisitWhileStatement(expr *WhileStatement) Value {
 	return NilValue{}
 }
 
+func (e *Evaluator) VisitForStatement(expr *ForStatement) Value {
+	if nil != expr.Initializer {
+		_ = e.Evaluate(expr.Initializer)
+	}
+	for {
+
+		conditionValue := e.Evaluate(expr.Condition)
+		if _, isError := conditionValue.(ErrorValue); isError {
+			return conditionValue
+		}
+
+		if !isTruthy(conditionValue) {
+			break
+		}
+
+		bodyResult := e.Evaluate(expr.Body)
+		if _, isError := bodyResult.(ErrorValue); isError {
+			return bodyResult
+		}
+		if nil != expr.Increment {
+			_ = e.Evaluate(expr.Increment)
+		}
+	}
+
+	return NilValue{}
+}
+
 // isTruthy determines the truthiness of a value following Lox rules
 func isTruthy(value Value) bool {
 	switch v := value.(type) {

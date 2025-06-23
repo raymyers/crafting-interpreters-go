@@ -56,6 +56,7 @@ type ExprVisitor interface {
 	VisitBlock(expr *Block) Value
 	VisitIfStatement(expr *IfStatement) Value
 	VisitWhileStatement(expr *WhileStatement) Value
+	VisitForStatement(expr *ForStatement) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -172,4 +173,16 @@ type WhileStatement struct {
 
 func (w *WhileStatement) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitWhileStatement(w)
+}
+
+type ForStatement struct {
+	Initializer Expr
+	Condition   Expr
+	Increment   Expr
+	Body        Expr
+	Line        uint
+}
+
+func (w *ForStatement) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitForStatement(w)
 }
