@@ -152,12 +152,17 @@ func (e *Evaluator) VisitLiteralExpr(expr *Literal) Value {
 // VisitBinaryExpr evaluates binary expressions
 func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 	if expr.Operator.Type == EQUAL {
-		if leftVar, ok := expr.Left.(*Variable); ok {
-			right := e.Evaluate(expr.Right)
-			if _, ev := right.(ErrorValue); ev {
-				return right
-			}
-			varName := leftVar.Name.Lexeme
+		// Evaluate the right side first
+		right := e.Evaluate(expr.Right)
+		if _, ev := right.(ErrorValue); ev {
+			return right
+		}
+
+		// Handle different left-hand side patterns
+		switch left := expr.Left.(type) {
+		case *Variable:
+			// Simple variable assignment
+			varName := left.Name.Lexeme
 			if e.scope.isDefined(varName) {
 				if e.scope.assign(varName, right) {
 					return right
@@ -168,10 +173,37 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 				return right
 			}
 			return ErrorValue{Message: "Assignment failed", Line: expr.Line}
-		} else {
-			return ErrorValue{Message: "Left of = must be a variable", Line: expr.Line}
-		}
 
+		case *Destructure:
+			// Destructuring assignment
+			// Right side must be a record
+			record, ok := right.(RecordValue)
+			if !ok {
+				return ErrorValue{Message: "Cannot destructure non-record value", Line: expr.Line}
+			}
+
+			// Process each field in the destructure pattern
+			for _, field := range left.Fields {
+				// Get the value from the record
+				value, exists := record.Fields[field.Name]
+				if !exists {
+					return ErrorValue{Message: fmt.Sprintf("Field '%s' not found in record", field.Name), Line: expr.Line}
+				}
+
+				// The field.Value should be a Variable that we bind to
+				if varExpr, ok := field.Value.(*Variable); ok {
+					varName := varExpr.Name.Lexeme
+					e.scope.define(varName, value)
+				} else {
+					return ErrorValue{Message: "Destructure pattern must contain variables", Line: expr.Line}
+				}
+			}
+
+			return right
+
+		default:
+			return ErrorValue{Message: "Left of = must be a variable or destructure pattern", Line: expr.Line}
+		}
 	}
 	if expr.Operator.Type == OR {
 		left := e.Evaluate(expr.Left)

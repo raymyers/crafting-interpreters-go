@@ -185,3 +185,10 @@ parser_tests:
     input: |
       || {}
     expected: '(thunk {})'
+  - name: "Handle"
+    input: |
+      handle Alert(
+        |value, resume| { 1 },
+        |_| { 1 }
+      )
+    expected: '(handle Alert (lambda (args value resume) 1.0) (lambda (args _) 1.0))'
