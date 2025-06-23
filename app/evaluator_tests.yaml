@@ -208,12 +208,6 @@ evaluator_tests:
     input: |
       !clock({}) > 0
     expected: "True({})"
-  - name: "zero-arg fun"
-    input: |
-      foo = |_| { perform Log("hello") }
-      foo({})
-    expected: "{}"
-    expectedOutput: "hello\n"
   - name: "print fun"
     input: |
       foo = |_| { perform Log("hello") }
