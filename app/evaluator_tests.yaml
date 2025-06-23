@@ -8,95 +8,95 @@ evaluator_tests:
     expected: "hello"
 
   - name: "Boolean"
-    input: "true"
-    expected: "true"
+    input: "True({})"
+    expected: "True({})"
 
   - name: "Nil"
-    input: "nil"
-    expected: "nil"
+    input: "{}"
+    expected: "{}"
 
   - name: "Addition"
-    input: "2 + 3"
+    input: "!int_add(2, 3)"
     expected: "5"
 
   - name: "Subtraction"
-    input: "5 - 2"
+    input: "!int_subtract(5, 2)"
     expected: "3"
 
   - name: "Multiplication"
-    input: "4 * 6"
+    input: "!int_multiply(4, 6)"
     expected: "24"
 
   - name: "Division"
-    input: "8 / 2"
+    input: "!int_divide(8, 2)"
     expected: "4"
 
   - name: "LessThan"
-    input: "3 < 5"
-    expected: "true"
+    input: "!int_less_than(3, 5)"
+    expected: "True({})"
 
   - name: "LessThanOrEqual"
-    input: "7 <= 5"
-    expected: "false"
+    input: "!int_less_equal(7, 5)"
+    expected: "False({})"
 
   - name: "GreaterThan"
-    input: "5 > 3"
-    expected: "true"
+    input: "!int_greater_than(5, 3)"
+    expected: "True({})"
 
   - name: "GreaterThanOrEqual"
-    input: "5 >= 3"
-    expected: "true"
+    input: "!int_greater_equal(5, 3)"
+    expected: "True({})"
 
   - name: "Equality"
-    input: "1 == 1"
-    expected: "true"
+    input: "!equal(1, 1)"
+    expected: "True({})"
 
   - name: "Inequality"
-    input: "1 != 2"
-    expected: "true"
+    input: "!not_equal(1, 2)"
+    expected: "True({})"
 
   - name: "UnaryMinus"
-    input: "-42"
+    input: "!int_negate(42)"
     expected: "-42"
 
   - name: "UnaryMinusFloat"
-    input: "-73"
+    input: "!int_negate(73)"
     expected: "-73"
 
-  - name: "UnaryBang"
-    input: "!true"
-    expected: "false"
+  - name: "LogicalNot"
+    input: "!not(True({}))"
+    expected: "False({})"
 
-  - name: "UnaryBangFloat"
-    input: "!10.40"
-    expected: "false"
+  - name: "LogicalNotNumber"
+    input: "!not(10.40)"
+    expected: "False({})"
 
-  - name: "UnaryBangGrouped"
-    input: "!((false))"
-    expected: "true"
+  - name: "LogicalNotGrouped"
+    input: "!not(!not(False({})))"
+    expected: "True({})"
 
   - name: "Grouping"
-    input: "(2 + 3)"
+    input: "(!int_add(2, 3))"
     expected: "5"
 
   - name: "ComplexExpression"
-    input: "2 + 3 * 4"
+    input: "!int_add(2, !int_multiply(3, 4))"
     expected: "14"
 
   - name: "GroupedExpression"
-    input: "(2 + 3) * 4"
+    input: "!int_multiply((!int_add(2, 3)), 4)"
     expected: "20"
 
   - name: "NestedGrouping"
-    input: "((1 + 2) * 3)"
+    input: "((!int_multiply((!int_add(1, 2)), 3)))"
     expected: "9"
 
   - name: "MixedTypes"
-    input: '"hello" == "world"'
-    expected: "false"
+    input: '!equal("hello", "world")'
+    expected: "False({})"
 
   - name: "FloatNumbers"
-    input: "3.14 + 2.71"
+    input: "!float_add(3.14, 2.71)"
     expected: "5.85"
 
   - name: "GroupedString"
@@ -104,78 +104,83 @@ evaluator_tests:
     expected: "hello"
 
   - name: "StringConcat"
-    input: '"hel" + "lo"'
+    input: '!string_append("hel", "lo")'
     expected: "hello"
 
   - name: "StringEqTrue"
-    input: '"hello" == "hello"'
-    expected: "true"
+    input: '!equal("hello", "hello")'
+    expected: "True({})"
 
   - name: "StringNeqTrue"
-    input: '"hello" != "world"'
-    expected: "true"
+    input: '!not_equal("hello", "world")'
+    expected: "True({})"
 
   - name: "StringEqFalse"
-    input: '"hello" == "world"'
-    expected: "false"
+    input: '!equal("hello", "world")'
+    expected: "False({})"
 
   - name: "StringNeqFalse"
-    input: '"hello" != "hello"'
-    expected: "false"
+    input: '!not_equal("hello", "hello")'
+    expected: "False({})"
 
   - name: "Print"
-    input: 'print "hello"'
-    expected: "nil"
+    input: 'perform Log("hello")'
+    expected: "{}"
 
   - name: "Print"
-    input: 'print 5'
-    expected: "nil"
+    input: 'perform Log(5)'
+    expected: "{}"
 
   - name: "AddNumbersToString"
-    input: '4 + "a" + 7'
-    expected: "Evaluation error: Operands must be two numbers or two strings"
+    input: '!string_append(!int_to_string(4), !string_append("a", !int_to_string(7)))'
+    expected: "4a7"
 
 
   - name: "Vars"
     input: |
-      var a = "hello";
-      a
+      || {
+        a = "hello"
+        a
+      }
     expected: "hello"
 
   - name: "VarAssign"
     input: |
-      var a = "hello";
-      a = "world";
-      a
+      || {
+        a = "hello"
+        a = "world"
+        a
+      }
     expected: "world"
 
   - name: "Block"
     input: |
-      {
-        var a = {
-          1 + 1
-        };
-        a
+      || {
+        a = || {
+          !int_add(1, 1)
+        }
+        !a({})
       }
     expected: "2"
 
   - name: "NestedScope"
     input: |
-      {
-        var a = 1;
-        {
+      || {
+        a = 1
+        || {
           a = 2
+          a
         }
-        a
       }
     expected: "2"
 
   - name: "NestedScopeRedefine"
     input: |
-      {
-        var a = 1;
-        {
-          var a = 2
+      || {
+        a = 1
+        inner = || {
+          a = 2
+          a
         }
         a
       }
@@ -183,117 +188,258 @@ evaluator_tests:
 
   - name: "IfTrue"
     input: |
-      var a = 1;
-      if (true) {
-        a = 2;
+      || {
+        a = 1
+        match True({}) {
+          True(_) -> a = 2
+          False(_) -> a
+        }
+        a
       }
-      a
     expected: "2"
   - name: "IfFalse"
     input: |
-      var a = 1;
-      if (false) {
-        a = 2;
+      || {
+        a = 1
+        match False({}) {
+          True(_) -> a = 2
+          False(_) -> a
+        }
+        a
       }
-      a
     expected: "1"
   - name: "Or"
     input: |
-      false or false or true;
-    expected: "true"
+      || {
+        match False({}) {
+          True(_) -> True({})
+          False(_) -> match False({}) {
+            True(_) -> True({})
+            False(_) -> True({})
+          }
+        }
+      }
+    expected: "True({})"
   - name: "OrFirstTruthy"
     input: |
-      27 or true
+      || {
+        match 27 {
+          0 -> True({})
+          _ -> 27
+        }
+      }
     expected: "27"
   - name: "AndLastTruthy"
     input: |
-      27 and 67
+      || {
+        match 27 {
+          0 -> False({})
+          _ -> 67
+        }
+      }
     expected: "67"
   - name: "AndFalse"
     input: |
-      false and 56
-    expected: "false"
+      || {
+        match False({}) {
+          True(_) -> 56
+          False(_) -> False({})
+        }
+      }
+    expected: "False({})"
   - name: "While"
     input: |
-      var foo = 0;
-      while (foo < 3) print foo = foo + 1;
-    expected: "nil"
+      || {
+        loop = !fix(|loop, foo| {
+          match !int_less_than(foo, 3) {
+            True(_) -> (
+              _ = perform Log(!int_to_string(foo = !int_add(foo, 1)))
+              loop(foo)
+            )
+            False(_) -> {}
+          }
+        })
+        loop(0)
+      }
+    expected: "{}"
     expectedOutput: |
       1
       2
       3
   - name: "For"
     input: |
-      for (var world = 0; world < 3; world = world + 1) {
-        print world;
+      || {
+        loop = !fix(|loop, world| {
+          match !int_less_than(world, 3) {
+            True(_) -> (
+              _ = perform Log(!int_to_string(world))
+              loop(!int_add(world, 1))
+            )
+            False(_) -> {}
+          }
+        })
+        loop(0)
       }
-    expected: "nil"
+    expected: "{}"
     expectedOutput: |
       0
       1
       2
   - name: "Clock"
     input: |
-      clock() > 0
-    expected: "true"
+      || {
+        !int_greater_than(!clock({}), 0)
+      }
+    expected: "True({})"
   - name: "zero-arg fun"
     input: |
-      fun foo() { print "hello" }
-      foo()
-    expected: "nil"
+      || {
+        foo = |_| { perform Log("hello") }
+        foo({})
+      }
+    expected: "{}"
     expectedOutput: "hello\n"
   - name: "print fun"
     input: |
-      fun foo() { print "hello" }
-      print foo;
-    expected: "nil"
+      || {
+        foo = |_| { perform Log("hello") }
+        perform Log(!function_to_string(foo))
+      }
+    expected: "{}"
     expectedOutput: "<fn foo>\n"
   - name: "Function with one argument"
     input: |
-      fun greet(name) {
-        print "Hello, " + name + "!";
+      || {
+        greet = |name| {
+          perform Log(!string_append("Hello, ", !string_append(name, "!")))
+        }
+        greet("World")
       }
-      greet("World");
-    expected: "nil"
+    expected: "{}"
     expectedOutput: "Hello, World!\n"
   - name: "Function with two arguments"
     input: |
-      fun add(a, b) {
-        print a + b;
+      || {
+        add = |a, b| {
+          perform Log(!int_to_string(!int_add(a, b)))
+        }
+        add(10, 20)
       }
-      add(10, 20);
-    expected: "nil"
+    expected: "{}"
     expectedOutput: "30\n"
   - name: "Function with three arguments"
     input: |
-      fun multiply(x, y, z) {
-        print x * y * z;
+      || {
+        multiply = |x, y, z| {
+          perform Log(!int_to_string(!int_multiply(!int_multiply(x, y), z)))
+        }
+        multiply(2, 3, 4)
       }
-      multiply(2, 3, 4);
-    expected: "nil"
+    expected: "{}"
     expectedOutput: "24\n"
   - name: "Function with expression arguments"
     input: |
-      fun add(a, b) {
-        print a + b;
+      || {
+        add = |a, b| {
+          perform Log(!int_to_string(!int_add(a, b)))
+        }
+        add(!int_multiply(5, 2), !int_add(3, 7))
       }
-      add(5 * 2, 3 + 7);
-    expected: "nil"
+    expected: "{}"
     expectedOutput: "20\n"
   - name: "Function with wrong argument count"
     input: |
-      fun add(a, b) {
-        print a + b;
+      || {
+        add = |a, b| {
+          perform Log(!int_to_string(!int_add(a, b)))
+        }
+        add(1)
       }
-      add(1);
     expected: "Evaluation error: Expected 2 arguments but got 1"
   - name: "Function arguments are scoped"
     input: |
-      fun test(x) {
-        var y = x + 1;
-        print y;
+      || {
+        test = |x| {
+          y = !int_add(x, 1)
+          perform Log(!int_to_string(y))
+        }
+        _ = test(5)
+        perform Log(!int_to_string(x))
       }
-      test(5);
-      print x;
     expected: "Evaluation error: Undefined variable 'x'"
     expectedOutput: "6\n"
+
+  - name: "Records"
+    input: |
+      || {
+        alice = {name: "Alice"}
+        bob = {name: "Bob", height: 192}
+        alice.name
+      }
+    expected: "Alice"
+
+  - name: "Record spread"
+    input: |
+      || {
+        bob = {name: "Bob", height: 192}
+        {height: 100, ..bob}
+      }
+    expected: "{height: 100, name: \"Bob\"}"
+
+  - name: "Lists"
+    input: |
+      || {
+        items = [1, 2]
+        items = [10, ..items]
+        total = !list_fold(items, 0, !int_add)
+        total
+      }
+    expected: "13"
+
+  - name: "Match expressions"
+    input: |
+      || {
+        match !int_parse("not a number") {
+          Ok(value) -> value
+          Error(_) -> -1
+        }
+      }
+    expected: "-1"
+
+  - name: "Match union types"
+    input: |
+      || {
+        match Cat("felix") {
+          Cat(name) -> name
+          _ -> "wild"
+        }
+      }
+    expected: "felix"
+
+  - name: "Let destructuring"
+    input: |
+      || {
+        {food: f} = {food: "Greens", action: "eat"}
+        f
+      }
+    expected: "Greens"
+
+  - name: "Higher order functions"
+    input: |
+      || {
+        inc = !int_add(1)
+        twice = |f, x| {
+          f(f(x))
+        }
+        inc2 = twice(inc)
+        inc2(5)
+      }
+    expected: "7"
+
+  - name: "Named references"
+    input: |
+      || {
+        std = @std:1
+        std.list.contains([1], 0)
+      }
+    expected: "False({})"

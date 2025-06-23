@@ -1,7 +1,7 @@
 parser_tests:
   - name: "FunctionCallNoArgs"
-    input: "foo()"
-    expected: "(call foo)"
+    input: "foo({})"
+    expected: "(call foo {})"
 
   - name: "FunctionCallOneArg"
     input: "foo(42)"
@@ -11,13 +11,13 @@ parser_tests:
     input: "foo(1, 2, 3)"
     expected: "(call foo 1.0 2.0 3.0)"
 
-  - name: "FunctionCallWithExpressions"
-    input: "foo(1 + 2, bar)"
-    expected: "(call foo (+ 1.0 2.0) bar)"
+  - name: "BuiltinCall"
+    input: "!int_add(1, 2)"
+    expected: "(builtin int_add 1.0 2.0)"
 
   - name: "ChainedFunctionCalls"
-    input: "foo()(bar)"
-    expected: "(call (call foo) bar)"
+    input: "foo({})(bar)"
+    expected: "(call (call foo {}) bar)"
   - name: "Number"
     input: "42"
     expected: "42.0"
@@ -27,169 +27,168 @@ parser_tests:
     expected: "hello"
 
   - name: "Boolean"
-    input: "true"
-    expected: "true"
+    input: "True({})"
+    expected: "(union True {})"
 
-  - name: "Nil"
-    input: "nil"
-    expected: "nil"
+  - name: "EmptyRecord"
+    input: "{}"
+    expected: "{}"
 
   - name: "Addition"
-    input: "2 + 3"
-    expected: "(+ 2.0 3.0)"
+    input: "!int_add(2, 3)"
+    expected: "(builtin int_add 2.0 3.0)"
 
   - name: "Subtraction"
-    input: "5 - 2"
-    expected: "(- 5.0 2.0)"
+    input: "!int_subtract(5, 2)"
+    expected: "(builtin int_subtract 5.0 2.0)"
 
   - name: "Multiplication"
-    input: "4 * 6"
-    expected: "(* 4.0 6.0)"
+    input: "!int_multiply(4, 6)"
+    expected: "(builtin int_multiply 4.0 6.0)"
 
   - name: "Division"
-    input: "8 / 2"
-    expected: "(/ 8.0 2.0)"
+    input: "!int_divide(8, 2)"
+    expected: "(builtin int_divide 8.0 2.0)"
 
   - name: "Comparison"
-    input: "3 < 5"
-    expected: "(< 3.0 5.0)"
+    input: "!int_less_than(3, 5)"
+    expected: "(builtin int_less_than 3.0 5.0)"
 
   - name: "Equality"
-    input: "1 == 1"
-    expected: "(== 1.0 1.0)"
+    input: "!equal(1, 1)"
+    expected: "(builtin equal 1.0 1.0)"
 
   - name: "Inequality"
-    input: "1 != 2"
-    expected: "(!= 1.0 2.0)"
+    input: "!not_equal(1, 2)"
+    expected: "(builtin not_equal 1.0 2.0)"
 
   - name: "UnaryMinus"
-    input: "-42"
-    expected: "(- 42.0)"
+    input: "!int_negate(42)"
+    expected: "(builtin int_negate 42.0)"
 
-  - name: "UnaryBang"
-    input: "!true"
-    expected: "(! true)"
+  - name: "LogicalNot"
+    input: "!not(True({}))"
+    expected: "(builtin not (union True {}))"
 
   - name: "Grouping"
-    input: "(2 + 3)"
-    expected: "(group (+ 2.0 3.0))"
+    input: "(!int_add(2, 3))"
+    expected: "(group (builtin int_add 2.0 3.0))"
 
   - name: "ComplexExpression"
-    input: "2 + 3 * 4"
-    expected: "(+ 2.0 (* 3.0 4.0))"
+    input: "!int_add(2, !int_multiply(3, 4))"
+    expected: "(builtin int_add 2.0 (builtin int_multiply 3.0 4.0))"
 
   - name: "GroupedExpression"
-    input: "(2 + 3) * 4"
-    expected: "(* (group (+ 2.0 3.0)) 4.0)"
+    input: "!int_multiply((!int_add(2, 3)), 4)"
+    expected: "(builtin int_multiply (group (builtin int_add 2.0 3.0)) 4.0)"
 
   - name: "NestedGrouping"
-    input: "((1 + 2) * 3)"
-    expected: "(group (* (group (+ 1.0 2.0)) 3.0))"
+    input: "((!int_multiply((!int_add(1, 2)), 3)))"
+    expected: "(group (group (builtin int_multiply (group (builtin int_add 1.0 2.0)) 3.0)))"
 
   - name: "MixedTypes"
-    input: '"hello" == "world"'
-    expected: "(== hello world)"
+    input: '!equal("hello", "world")'
+    expected: "(builtin equal hello world)"
 
   - name: "FloatNumbers"
-    input: "3.14 + 2.71"
-    expected: "(+ 3.14 2.71)"
+    input: "!float_add(3.14, 2.71)"
+    expected: "(builtin float_add 3.14 2.71)"
 
-  - name: "Print"
-    input: 'print "hello"'
-    expected: '(print hello)'
+  - name: "Effect"
+    input: 'perform Log("hello")'
+    expected: '(perform Log hello)'
 
-  - name: "SeqPrints"
+  - name: "SeqEffects"
     input: |
-      print "a";
-      print "b";
-    expected: '(seq (print a) (print b))'
+      || {
+        _ = perform Log("a")
+        perform Log("b")
+      }
+    expected: '(thunk (seq (= _ (perform Log a)) (perform Log b)))'
 
-  - name: "Var"
-    input: var world = 10;
-    expected: '(var world 10.0)'
+  - name: "Assignment"
+    input: |
+      || {
+        world = 10
+        world
+      }
+    expected: '(thunk (seq (= world 10.0) world))'
 
-  - name: "VarNil"
-    input: var world;
-    expected: '(var world nil)'
+  - name: "ChainedAssign"
+    input: |
+      || {
+        a = b = 1
+        a
+      }
+    expected: '(thunk (seq (= a (= b 1.0)) a))'
 
-  - name: "Assign"
-    input: a = b = 1
-    expected: '(= a (= b 1.0))'
-
-  - name: "Block"
+  - name: "Thunk"
     input: |
-      {
-        print "a";
-        print "b";
+      || {
+        perform Log("a")
+        perform Log("b")
       }
-    expected: '(block (print a) (print b))'
-  - name: "Blocks"
+    expected: '(thunk (seq (perform Log a) (perform Log b)))'
+  - name: "Records"
     input: |
-      {
-        1
+      {name: "Alice", age: 30}
+    expected: '(record (field name Alice) (field age 30.0))'
+  - name: "RecordAccess"
+    input: |
+      alice.name
+    expected: '(access alice name)'
+  - name: "List"
+    input: |
+      [1, 2, 3]
+    expected: '(list 1.0 2.0 3.0)'
+  - name: "ListSpread"
+    input: |
+      [0, ..items]
+    expected: '(list 0.0 (spread items))'
+  - name: "Match"
+    input: |
+      match value {
+        Ok(x) -> x
+        Error(_) -> 0
       }
-      {
-        2
-      }
-    expected: '(seq (block 1.0) (block 2.0))'
-  - name: "Statement before and after block"
+    expected: '(match value (case (pattern Ok x) x) (case (pattern Error _) 0.0))'
+  - name: "Lambda"
     input: |
-      1
-      {
-        2
-      }
-      3
-    expected: '(seq 1.0 (block 2.0) 3.0)'
-  - name: "if"
+      |x, y| { !int_add(x, y) }
+    expected: '(lambda (args x y) (builtin int_add x y))'
+  - name: "NamedRef"
     input: |
-      if (true) {
-        1
-      }
-    expected: '(if true (block 1.0))'
-  - name: "ifElse"
-    input: |
-      if (true) {
-        1
-      } else {
-        2
-      }
-    expected: '(if true (block 1.0) (block 2.0))'
-  - name: "ifNoBlock"
-    input: |
-      if (true) 1;
-      else 2;
-    expected: '(if true 1.0 2.0)'
-  - name: "Or"
-    input: |
-      print false or false or true;
-    expected: '(print (or (or false false) true))'
-  - name: "And"
-    input: |
-      true and false
-    expected: '(and true false)'
+      @std:1
+    expected: '(named_ref std 1)'
   
-  - name: "While"
+  - name: "FixedPoint"
     input: |
-      while (x < 3) print x;
-    expected: '(while (< x 3.0) (print x))'
+      !fix(|loop, x| {
+        match !int_less_than(x, 3) {
+          True(_) -> loop(!int_add(x, 1))
+          False(_) -> x
+        }
+      })
+    expected: '(builtin fix (lambda (args loop x) (match (builtin int_less_than x 3.0) (case (pattern True _) (call loop (builtin int_add x 1.0))) (case (pattern False _) x))))'
   
-  - name: "WhileBlock"
+  - name: "Handle"
     input: |
-      while (x < 10) {
-        print x;
-        x = x + 1;
-      }
-    expected: '(while (< x 10.0) (block (print x) (= x (+ x 1.0))))'
-  - name: "For"
+      handle Alert(
+        |value, resume| {
+          resume({})
+        },
+        |_| { {} }
+      )
+    expected: '(handle Alert (lambda (args value resume) (call resume {})) (lambda (args _) {}))'
+  - name: "Destructuring"
     input: |
-      for (var baz = 0; baz < 3; baz) print baz = baz + 1;
-    expected: '(for (var baz 0.0) (< baz 3.0) baz (print (= baz (+ baz 1.0))))'
-  - name: "EmptyFor"
+      {food: f} = record
+    expected: '(= (destructure (field food f)) record)'
+  - name: "Union"
     input: |
-      for (;;) {}
-    expected: '(for nil nil nil (block))'
-  - name: "EmptyFor"
+      Cat("felix")
+    expected: '(union Cat felix)'
+  - name: "EmptyThunk"
     input: |
-      fun foo() {
-      }
-    expected: '(fun foo (args) (block))'
+      || {}
+    expected: '(thunk {})'
