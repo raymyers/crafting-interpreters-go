@@ -224,7 +224,8 @@ func (p *Parser) primary() (Expr, error) {
 		}
 		varName := p.previous().Lexeme
 		if !p.match(EQUAL) {
-			return &VarStatement{name: varName, Expression: &Literal{Value: NilValue{}, Line: p.previous().Line}, Line: p.tokens[p.current-2].Line}, nil
+			return nil, fmt.Errorf("expect expression")
+			//return &VarStatement{name: varName, Expression: &Literal{Value: NilValue{}, Line: p.previous().Line}, Line: p.tokens[p.current-2].Line}, nil
 		}
 		expr, err := p.expression()
 		if err != nil {
