@@ -49,6 +49,7 @@ type ExprVisitor interface {
 	VisitGroupingExpr(expr *Grouping) Value
 	VisitLiteralExpr(expr *Literal) Value
 	VisitUnaryExpr(expr *Unary) Value
+	VisitVariableExpr(expr *Variable) Value
 	VisitPrintStatement(expr *PrintStatement) Value
 	VisitStatements(expr *Statements) Value
 	VisitVarStatement(expr *VarStatement) Value
@@ -95,6 +96,16 @@ type Unary struct {
 
 func (u *Unary) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitUnaryExpr(u)
+}
+
+// Variable represents a variable reference (e.g., x)
+type Variable struct {
+	Name Token
+	Line uint
+}
+
+func (v *Variable) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitVariableExpr(v)
 }
 
 // PrintStatement (e.g., (1 + 2))

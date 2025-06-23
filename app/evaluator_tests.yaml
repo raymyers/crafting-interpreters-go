@@ -134,3 +134,10 @@ evaluator_tests:
   - name: "AddNumbersToString"
     input: '4 + "a" + 7'
     expected: "Evaluation error: Operands must be two numbers or two strings"
+
+
+  - name: "Vars"
+    input: |
+      var a = "hello";
+      a
+    expected: "hello"

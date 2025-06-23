@@ -214,6 +214,12 @@ func (p *Parser) primary() (Expr, error) {
 
 		return &VarStatement{name: varName, Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
+
+	if p.match(IDENTIFIER) {
+		token := p.previous()
+		return &Variable{Name: token, Line: token.Line}, nil
+	}
+
 	return nil, fmt.Errorf("expect expression")
 }
 

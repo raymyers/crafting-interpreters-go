@@ -3,7 +3,9 @@ package main
 import "fmt"
 
 // Evaluator implements the visitor pattern to evaluate expressions
-type Evaluator struct{}
+type Evaluator struct {
+	env map[string]Value
+}
 
 // Evaluate evaluates an expression and returns its value
 func (e *Evaluator) Evaluate(expr Expr) Value {
@@ -127,6 +129,14 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 	return ErrorValue{Message: "Unknown unary operator", Line: expr.Line}
 }
 
+// VisitVariableExpr evaluates variable expressions
+func (e *Evaluator) VisitVariableExpr(expr *Variable) Value {
+	if value, ok := e.env[expr.Name.Lexeme]; ok {
+		return value
+	}
+	return ErrorValue{Message: fmt.Sprintf("Undefined variable '%s'", expr.Name.Lexeme), Line: expr.Line}
+}
+
 func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 	result := e.Evaluate(expr.Expression)
 	switch result.(type) {
@@ -139,9 +149,9 @@ func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 }
 
 func (e *Evaluator) VisitStatements(expr *Statements) Value {
-	result := NilValue{}
+	var result Value = NilValue{}
 	for _, v := range expr.Exprs {
-		result := e.Evaluate(v)
+		result = e.Evaluate(v)
 		switch result.(type) {
 		case ErrorValue:
 			return result
@@ -156,6 +166,7 @@ func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
 	case ErrorValue:
 		return result
 	default:
+		e.env[expr.name] = result
 		return NilValue{}
 	}
 }

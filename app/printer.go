@@ -58,6 +58,11 @@ func (ap *AstPrinter) VisitUnaryExpr(expr *Unary) Value {
 	return StringValue{Val: ap.parenthesize(expr.Operator.Lexeme, expr.Right)}
 }
 
+// VisitVariableExpr prints variable names
+func (ap *AstPrinter) VisitVariableExpr(expr *Variable) Value {
+	return StringValue{Val: expr.Name.Lexeme}
+}
+
 func (ap *AstPrinter) VisitPrintStatement(expr *PrintStatement) Value {
 	return StringValue{Val: ap.parenthesize("print", expr.Expression)}
 }

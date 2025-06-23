@@ -82,7 +82,7 @@ func handleEvaluate(filename string, printResult bool) {
 	}
 
 	// Evaluate the expression
-	evaluator := &Evaluator{}
+	evaluator := &Evaluator{env: make(map[string]Value)}
 	result := evaluator.Evaluate(expr)
 	switch result.(type) {
 	case ErrorValue:
