@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct{}
 
@@ -127,13 +129,11 @@ func (e *Evaluator) VisitUnaryExpr(expr *Unary) Value {
 func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 	result := e.Evaluate(expr.Expression)
 	switch result.(type) {
-	case StringValue:
-		print(result.(StringValue).Val)
-		return NilValue{}
 	case ErrorValue:
 		return result
 	default:
-		return ErrorValue{Message: "Operand must be a string", Line: expr.Line}
+		fmt.Printf("%s\n", formatValue(result))
+		return NilValue{}
 	}
 }
 

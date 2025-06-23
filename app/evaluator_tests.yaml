@@ -126,3 +126,7 @@ evaluator_tests:
   - name: "Print"
     input: 'print "hello"'
     expected: "nil"
+
+  - name: "Print"
+    input: 'print 5'
+    expected: "nil"
