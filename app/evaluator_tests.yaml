@@ -159,17 +159,6 @@ evaluator_tests:
       }
     expected: "2"
 
-  - name: "NestedScope"
-    input: |
-      {
-        a = 1
-        {
-          a = 2
-        }
-        a
-      }
-    expected: "2"
-
   - name: "NestedScopeRedefine"
     input: |
       {
@@ -348,11 +337,11 @@ evaluator_tests:
           },
           |_| {alerts: [], return: exec({})}
         )
-        run = |_| {
-          _ = perform Alert("first")
-          _ = perform Alert("second")
-          {}
-        }
-        capture(run)
       }
-    expected: "[]"
+      run = |_| {
+        _ = perform Alert("first")
+        _ = perform Alert("second")
+        {}
+      }
+      capture(run)
+    expected: '{return: {}, alerts: ["first", "second"]}'

@@ -44,8 +44,6 @@ const (
 	IF
 	NIL
 	OR
-	PRINT
-	RETURN
 	MATCH
 	PERFORM
 	HANDLE
@@ -90,8 +88,6 @@ var tokenTypeName = map[TokenType]string{
 	IF:            "IF",
 	NIL:           "NIL",
 	OR:            "OR",
-	PRINT:         "PRINT",
-	RETURN:        "RETURN",
 	MATCH:         "MATCH",
 	PERFORM:       "PERFORM",
 	HANDLE:        "HANDLE",

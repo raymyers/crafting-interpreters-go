@@ -356,10 +356,6 @@ func getTokenTypeForIdentifier(identifier string) TokenType {
 		return NIL
 	case "or":
 		return OR
-	case "print":
-		return PRINT
-	case "return":
-		return RETURN
 	case "match":
 		return MATCH
 	case "perform":

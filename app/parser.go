@@ -356,15 +356,6 @@ func (p *Parser) primary() (Expr, error) {
 		return &Grouping{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
 	}
 
-	if p.match(PRINT) {
-		expr, err := p.expression()
-		if err != nil {
-			return nil, err
-		}
-
-		return &PrintStatement{Expression: expr, Line: p.tokens[p.current-2].Line}, nil
-	}
-
 	if p.match(IF) {
 		return p.ifStatement()
 	}
@@ -402,7 +393,7 @@ func (p *Parser) primary() (Expr, error) {
 		return p.handleExpression()
 	}
 
-	return nil, fmt.Errorf("expect expression")
+	return nil, fmt.Errorf("expect expression, got '%s'", p.tokens[p.current].Lexeme)
 }
 
 // blockStatement → "{" statements "}"
