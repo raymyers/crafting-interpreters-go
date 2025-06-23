@@ -706,22 +706,34 @@ func (p *Parser) recordStatement() (Expr, error) {
 	var fields []RecordField
 	
 	for !p.check(RBRAC) && !p.isAtEnd() {
-		name, err := p.consume(IDENTIFIER, "Expect field name.")
-		if err != nil {
-			return nil, err
+		// Check for spread syntax
+		if p.match(DOT_DOT) {
+			// Parse spread expression
+			expr, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			
+			// Add spread as a special field with empty name
+			fields = append(fields, RecordField{Name: "", Value: &Spread{Expression: expr, Line: p.previous().Line}})
+		} else {
+			name, err := p.consume(IDENTIFIER, "Expect field name.")
+			if err != nil {
+				return nil, err
+			}
+			
+			_, err = p.consume(COLON, "Expect ':' after field name.")
+			if err != nil {
+				return nil, err
+			}
+			
+			value, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+			
+			fields = append(fields, RecordField{Name: name.Lexeme, Value: value})
 		}
-		
-		_, err = p.consume(COLON, "Expect ':' after field name.")
-		if err != nil {
-			return nil, err
-		}
-		
-		value, err := p.expression()
-		if err != nil {
-			return nil, err
-		}
-		
-		fields = append(fields, RecordField{Name: name.Lexeme, Value: value})
 		
 		if !p.match(COMMA) {
 			break

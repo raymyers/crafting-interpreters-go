@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	
 	"github.com/chzyer/readline"
@@ -135,13 +136,26 @@ func formatValue(value Value) string {
 		if len(v.Fields) == 0 {
 			return "{}"
 		}
+		// Sort keys for consistent output
+		keys := make([]string, 0, len(v.Fields))
+		for key := range v.Fields {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		
 		result := "{"
 		first := true
-		for key, value := range v.Fields {
+		for _, key := range keys {
 			if !first {
 				result += ", "
 			}
-			result += fmt.Sprintf("%s: %s", key, formatValue(value))
+			fieldValue := v.Fields[key]
+			// Quote strings in record context
+			if sv, ok := fieldValue.(StringValue); ok {
+				result += fmt.Sprintf("%s: \"%s\"", key, sv.Val)
+			} else {
+				result += fmt.Sprintf("%s: %s", key, formatValue(fieldValue))
+			}
 			first = false
 		}
 		result += "}"

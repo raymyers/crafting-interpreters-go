@@ -1,0 +1,2 @@
+std = @std:1
+std.list.contains([1], 0)

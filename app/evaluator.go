@@ -85,6 +85,31 @@ func boolToUnion(b bool) UnionValue {
 	return falseValue()
 }
 
+func valuesEqual(a, b Value) bool {
+	switch va := a.(type) {
+	case NumberValue:
+		if vb, ok := b.(NumberValue); ok {
+			return va.Val == vb.Val
+		}
+	case StringValue:
+		if vb, ok := b.(StringValue); ok {
+			return va.Val == vb.Val
+		}
+	case BoolValue:
+		if vb, ok := b.(BoolValue); ok {
+			return va.Val == vb.Val
+		}
+	case NilValue:
+		_, ok := b.(NilValue)
+		return ok
+	case UnionValue:
+		if vb, ok := b.(UnionValue); ok {
+			return va.Constructor == vb.Constructor && valuesEqual(va.Value, vb.Value)
+		}
+	}
+	return false
+}
+
 // Evaluate evaluates an expression and returns its value
 func (e *Evaluator) Evaluate(expr Expr) Value {
 	if expr == nil {
@@ -448,6 +473,11 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 				argValues[i] = argValue
 			}
 
+			// Check if this is a builtin function
+			if lv.Builtin != nil {
+				return lv.Builtin(argValues)
+			}
+
 			// Create new scope for lambda execution (based on closure)
 			previousScope := e.scope
 			e.scope = NewScope(lv.Closure)
@@ -474,8 +504,83 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 		return callee
 	}
 
-	// Any other function call is an error
-	return ErrorValue{Message: "Undefined function", Line: expr.Line}
+	// Handle different types of callable values
+	if fv, ok := callee.(FunValue); ok {
+		// Check argument count
+		if len(expr.Arguments) != len(fv.Val.Parameters) {
+			return ErrorValue{
+				Message: fmt.Sprintf("Expected %d arguments but got %d", len(fv.Val.Parameters), len(expr.Arguments)),
+				Line:    expr.Line,
+			}
+		}
+
+		// Evaluate arguments
+		argValues := make([]Value, len(expr.Arguments))
+		for i, arg := range expr.Arguments {
+			argValue := e.Evaluate(arg)
+			if _, isError := argValue.(ErrorValue); isError {
+				return argValue
+			}
+			argValues[i] = argValue
+		}
+
+		// Create new scope for function execution
+		previousScope := e.scope
+		e.scope = NewScope(previousScope)
+
+		// Bind parameters to arguments in the new scope
+		for i, paramName := range fv.Val.Parameters {
+			e.scope.define(paramName, argValues[i])
+		}
+
+		// Execute function body
+		result := e.evalStatements(fv.Val.Block.Statements)
+
+		// Restore previous scope
+		e.scope = previousScope
+		return result
+	} else if lv, ok := callee.(LambdaValue); ok {
+		// Handle lambda function call
+		if len(lv.Parameters) != len(expr.Arguments) {
+			return ErrorValue{
+				Message: fmt.Sprintf("Expected %d arguments but got %d", len(lv.Parameters), len(expr.Arguments)),
+				Line:    expr.Line,
+			}
+		}
+
+		// Evaluate arguments
+		argValues := make([]Value, len(expr.Arguments))
+		for i, arg := range expr.Arguments {
+			argValue := e.Evaluate(arg)
+			if _, isError := argValue.(ErrorValue); isError {
+				return argValue
+			}
+			argValues[i] = argValue
+		}
+
+		// Check if this is a builtin function
+		if lv.Builtin != nil {
+			return lv.Builtin(argValues)
+		}
+
+		// Create new scope for lambda execution (based on closure)
+		previousScope := e.scope
+		e.scope = NewScope(lv.Closure)
+
+		// Bind parameters to arguments in the new scope
+		for i, paramName := range lv.Parameters {
+			e.scope.define(paramName, argValues[i])
+		}
+
+		// Execute lambda body
+		result := e.Evaluate(lv.Body)
+
+		// Restore previous scope
+		e.scope = previousScope
+		return result
+	} else {
+		return ErrorValue{Message: "cannot call a non-function", Line: expr.Line}
+	}
 }
 func (e *Evaluator) VisitFun(expr *Fun) Value {
 	val := FunValue{Val: *expr}
@@ -523,13 +628,43 @@ func isEqual(left, right Value) bool {
 // Placeholder implementations for new EYG visitor methods
 func (e *Evaluator) VisitRecord(expr *Record) Value {
 	fields := make(map[string]Value)
+	
+	// First pass: process all spread fields
 	for _, field := range expr.Fields {
-		value := e.Evaluate(field.Value)
-		if _, ev := value.(ErrorValue); ev {
-			return value
+		if field.Name == "" {
+			// This is a spread field
+			if spread, ok := field.Value.(*Spread); ok {
+				// Evaluate the spread expression
+				spreadValue := e.Evaluate(spread.Expression)
+				if _, ev := spreadValue.(ErrorValue); ev {
+					return spreadValue
+				}
+				
+				// Spread must be a record
+				if record, ok := spreadValue.(RecordValue); ok {
+					// Add all fields from the spread record
+					for name, value := range record.Fields {
+						fields[name] = value
+					}
+				} else {
+					return ErrorValue{Message: "Can only spread records", Line: spread.Line}
+				}
+			}
 		}
-		fields[field.Name] = value
 	}
+	
+	// Second pass: process explicit fields (these override spread fields)
+	for _, field := range expr.Fields {
+		if field.Name != "" {
+			// Regular field
+			value := e.Evaluate(field.Value)
+			if _, ev := value.(ErrorValue); ev {
+				return value
+			}
+			fields[field.Name] = value
+		}
+	}
+	
 	return RecordValue{Fields: fields}
 }
 
@@ -660,9 +795,21 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 		}
 		
 	case "clock":
-		if len(expr.Arguments) != 0 {
-			return ErrorValue{Message: "clock expects no arguments", Line: expr.Line}
+		if len(expr.Arguments) != 1 {
+			return ErrorValue{Message: "clock expects 1 argument (empty record)", Line: expr.Line}
 		}
+		
+		// Evaluate the argument (should be an empty record)
+		argValue := e.Evaluate(expr.Arguments[0])
+		if _, ev := argValue.(ErrorValue); ev {
+			return argValue
+		}
+		
+		// Check if it's an empty record (NilValue)
+		if _, ok := argValue.(NilValue); !ok {
+			return ErrorValue{Message: "clock expects an empty record argument", Line: expr.Line}
+		}
+		
 		epochSeconds := float64(time.Now().Unix())
 		return NumberValue{Val: epochSeconds}
 		
@@ -700,7 +847,48 @@ func (e *Evaluator) VisitHandle(expr *Handle) Value {
 }
 
 func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
-	return ErrorValue{Message: "NamedRef not implemented", Line: expr.Line}
+	// For now, implement basic std library
+	if expr.Module == "std" && expr.Index == 1 {
+		// Create a std library with list.contains function
+		// Use LambdaValue to represent the builtin function
+		containsFunc := LambdaValue{
+			Parameters: []string{"list", "item"},
+			Body: nil, // Special marker for builtin
+			Closure: nil,
+			Builtin: func(args []Value) Value {
+				if len(args) != 2 {
+					return ErrorValue{Message: "contains expects 2 arguments", Line: expr.Line}
+				}
+				
+				list, ok := args[0].(ListValue)
+				if !ok {
+					return falseValue()
+				}
+				
+				target := args[1]
+				for _, elem := range list.Elements {
+					if valuesEqual(elem, target) {
+						return trueValue()
+					}
+				}
+				return falseValue()
+			},
+		}
+		
+		listRecord := RecordValue{
+			Fields: map[string]Value{
+				"contains": containsFunc,
+			},
+		}
+		
+		return RecordValue{
+			Fields: map[string]Value{
+				"list": listRecord,
+			},
+		}
+	}
+	
+	return ErrorValue{Message: fmt.Sprintf("Unknown named reference @%s:%d", expr.Module, expr.Index), Line: expr.Line}
 }
 
 func (e *Evaluator) VisitThunk(expr *Thunk) Value {

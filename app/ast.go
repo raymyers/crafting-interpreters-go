@@ -67,6 +67,7 @@ type LambdaValue struct {
 	Parameters []string
 	Body       Expr
 	Closure    *Scope
+	Builtin    func([]Value) Value // For builtin functions
 }
 
 func (LambdaValue) implValue() {}
