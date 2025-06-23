@@ -110,6 +110,8 @@ func formatValue(value Value) string {
 			return "true"
 		}
 		return "false"
+	case FunValue:
+		return fmt.Sprintf("<fn %s>", v.Val.Name)
 	default:
 		return fmt.Sprintf("%v", value)
 	}
