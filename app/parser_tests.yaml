@@ -135,3 +135,8 @@ parser_tests:
         2
       }
     expected: '(if true (block 1.0) (block 2.0))'
+  - name: "ifNoBlock"
+    input: |
+      if (true) 1;
+      else 2;
+    expected: '(if true 1.0 2.0)'

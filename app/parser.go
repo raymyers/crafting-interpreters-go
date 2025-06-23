@@ -276,35 +276,36 @@ func (p *Parser) blockStatement() (Expr, error) {
 // ifStatement → "if" "(" expression ")" expression ( "else" expression )?
 func (p *Parser) ifStatement() (Expr, error) {
 	line := p.previous().Line
-	
+
 	_, err := p.consume(LPAR, "Expect '(' after 'if'.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	condition, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	_, err = p.consume(RPAR, "Expect ')' after if condition.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	thenBranch, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var elseBranch Expr
+	_ = p.match(SEMICOLON)
 	if p.match(ELSE) {
 		elseBranch, err = p.expression()
 		if err != nil {
 			return nil, err
 		}
 	}
-	
+
 	return &IfStatement{
 		Condition:  condition,
 		ThenBranch: thenBranch,
