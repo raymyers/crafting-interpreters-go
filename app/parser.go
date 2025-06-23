@@ -224,8 +224,7 @@ func (p *Parser) primary() (Expr, error) {
 		}
 		varName := p.previous().Lexeme
 		if !p.match(EQUAL) {
-			return nil, fmt.Errorf("expect expression")
-			//return &VarStatement{name: varName, Expression: &Literal{Value: NilValue{}, Line: p.previous().Line}, Line: p.tokens[p.current-2].Line}, nil
+			return &VarStatement{name: varName, Expression: &Literal{Value: NilValue{}, Line: p.previous().Line}, Line: p.tokens[p.current-2].Line}, nil
 		}
 		expr, err := p.expression()
 		if err != nil {
@@ -362,7 +361,9 @@ func (p *Parser) forStatement() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if p.check(LBRAC) {
+		return nil, fmt.Errorf("can't use block as for initializer")
+	}
 	// Optional
 	initializer, _ := p.expression()
 
@@ -370,12 +371,18 @@ func (p *Parser) forStatement() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p.check(LBRAC) {
+		return nil, fmt.Errorf("can't use block as for condition")
+	}
 	// Optional
 	condition, _ := p.expression()
 
-	_, err = p.consume(SEMICOLON, "Expect ';' after for condition.")
+	_, err = p.consume(SEMICOLON, "expect ';' after for condition.")
 	if err != nil {
 		return nil, err
+	}
+	if p.check(LBRAC) {
+		return nil, fmt.Errorf("can't use block as for increment")
 	}
 	// Optional
 	increment, _ := p.expression()
@@ -384,7 +391,9 @@ func (p *Parser) forStatement() (Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if p.check(VAR) {
+		return nil, fmt.Errorf("can't declare var as single statement in for")
+	}
 	body, err := p.expression()
 	if err != nil {
 		return nil, err

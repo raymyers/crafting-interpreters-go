@@ -91,7 +91,7 @@ parser_tests:
 
   - name: "VarNil"
     input: var world;
-    expected: 'Parse error: expect expression'
+    expected: '(var world nil)'
 
   - name: "Assign"
     input: a = b = 1
