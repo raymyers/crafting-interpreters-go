@@ -35,64 +35,64 @@ parser_tests:
     expected: "{}"
 
   - name: "Addition"
-    input: "!int_add(2, 3)"
-    expected: "(builtin int_add 2.0 3.0)"
+    input: "2 + 3"
+    expected: "(+ 2.0 3.0)"
 
   - name: "Subtraction"
-    input: "!int_subtract(5, 2)"
-    expected: "(builtin int_subtract 5.0 2.0)"
+    input: "5 - 2"
+    expected: "(- 5.0 2.0)"
 
   - name: "Multiplication"
-    input: "!int_multiply(4, 6)"
-    expected: "(builtin int_multiply 4.0 6.0)"
+    input: "4 * 6"
+    expected: "(* 4.0 6.0)"
 
   - name: "Division"
-    input: "!int_divide(8, 2)"
-    expected: "(builtin int_divide 8.0 2.0)"
+    input: "8 / 2"
+    expected: "(/ 8.0 2.0)"
 
   - name: "Comparison"
-    input: "!int_less_than(3, 5)"
-    expected: "(builtin int_less_than 3.0 5.0)"
+    input: "3 < 5"
+    expected: "(< 3.0 5.0)"
 
   - name: "Equality"
-    input: "!equal(1, 1)"
-    expected: "(builtin equal 1.0 1.0)"
+    input: "1 == 1"
+    expected: "(== 1.0 1.0)"
 
   - name: "Inequality"
-    input: "!not_equal(1, 2)"
-    expected: "(builtin not_equal 1.0 2.0)"
+    input: "1 != 2"
+    expected: "(!= 1.0 2.0)"
 
   - name: "UnaryMinus"
-    input: "!int_negate(42)"
-    expected: "(builtin int_negate 42.0)"
+    input: "-42"
+    expected: "(- 42.0)"
 
   - name: "LogicalNot"
-    input: "!not(True({}))"
-    expected: "(builtin not (union True {}))"
+    input: "!True({})"
+    expected: "(! (union True {}))"
 
   - name: "Grouping"
-    input: "(!int_add(2, 3))"
-    expected: "(group (builtin int_add 2.0 3.0))"
+    input: "(2 + 3)"
+    expected: "(group (+ 2.0 3.0))"
 
   - name: "ComplexExpression"
-    input: "!int_add(2, !int_multiply(3, 4))"
-    expected: "(builtin int_add 2.0 (builtin int_multiply 3.0 4.0))"
+    input: "2 + 3 * 4"
+    expected: "(+ 2.0 (* 3.0 4.0))"
 
   - name: "GroupedExpression"
-    input: "!int_multiply((!int_add(2, 3)), 4)"
-    expected: "(builtin int_multiply (group (builtin int_add 2.0 3.0)) 4.0)"
+    input: "(2 + 3) * 4"
+    expected: "(* (group (+ 2.0 3.0)) 4.0)"
 
   - name: "NestedGrouping"
-    input: "((!int_multiply((!int_add(1, 2)), 3)))"
-    expected: "(group (group (builtin int_multiply (group (builtin int_add 1.0 2.0)) 3.0)))"
+    input: "((1 + 2) * 3)"
+    expected: "(group (* (group (+ 1.0 2.0)) 3.0))"
 
   - name: "MixedTypes"
-    input: '!equal("hello", "world")'
-    expected: "(builtin equal hello world)"
+    input: '"hello" == "world"'
+    expected: "(== hello world)"
 
   - name: "FloatNumbers"
-    input: "!float_add(3.14, 2.71)"
-    expected: "(builtin float_add 3.14 2.71)"
+    input: "3.14 + 2.71"
+    expected: "(+ 3.14 2.71)"
 
   - name: "Effect"
     input: 'perform Log("hello")'
@@ -100,35 +100,28 @@ parser_tests:
 
   - name: "SeqEffects"
     input: |
-      || {
-        _ = perform Log("a")
-        perform Log("b")
-      }
-    expected: '(thunk (seq (= _ (perform Log a)) (perform Log b)))'
+      _ = perform Log("a")
+      perform Log("b")
+    expected: '(seq (= _ (perform Log a)) (perform Log b))'
 
   - name: "Assignment"
     input: |
-      || {
-        world = 10
-        world
-      }
-    expected: '(thunk (seq (= world 10.0) world))'
+      world = 10
+      world
+    expected: '(seq (= world 10.0) world)'
 
   - name: "ChainedAssign"
     input: |
-      || {
-        a = b = 1
-        a
-      }
-    expected: '(thunk (seq (= a (= b 1.0)) a))'
+      a = b = 1
+    expected: '(= a (= b 1.0))'
 
-  - name: "Thunk"
+  - name: "Block"
     input: |
-      || {
+      {
         perform Log("a")
         perform Log("b")
       }
-    expected: '(thunk (seq (perform Log a) (perform Log b)))'
+    expected: '(block (perform Log a) (perform Log b))'
   - name: "Records"
     input: |
       {name: "Alice", age: 30}

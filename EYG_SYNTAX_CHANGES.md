@@ -13,16 +13,14 @@ a = "world";
 
 **After (EYG):**
 ```eyg
-|| {
-  a = "hello"
-  a = "world"
-  a
-}
+a = "hello"
+a = "world"
+a
 ```
 
-### 2. Operators → Builtin Functions
-**Before (Lox):**
-```lox
+### 2. Operators (Kept from Lox)
+**EYG retains infix operators:**
+```eyg
 2 + 3
 5 - 2
 4 * 6
@@ -31,14 +29,11 @@ a = "world";
 1 == 1
 ```
 
-**After (EYG):**
+**But also adds builtin function calls:**
 ```eyg
-!int_add(2, 3)
-!int_subtract(5, 2)
-!int_multiply(4, 6)
-!int_divide(8, 2)
-!int_less_than(3, 5)
-!equal(1, 1)
+!int_parse("42")
+!list_fold(items, 0, |a, b| a + b)
+!clock({})
 ```
 
 ### 3. Boolean Values
@@ -76,12 +71,10 @@ greet("World");
 
 **After (EYG):**
 ```eyg
-|| {
-  greet = |name| {
-    perform Log(!string_append("Hello, ", !string_append(name, "!")))
-  }
-  greet("World")
+greet = |name| {
+  perform Log("Hello, " + name + "!")
 }
+greet("World")
 ```
 
 ### 6. Control Flow → Pattern Matching
@@ -102,7 +95,7 @@ match condition {
 }
 ```
 
-### 7. Loops → Recursive Functions
+### 7. Loops (Kept but can use Pattern Matching)
 **Before (Lox):**
 ```lox
 while (foo < 3) {
@@ -111,20 +104,24 @@ while (foo < 3) {
 }
 ```
 
-**After (EYG):**
+**After (EYG - traditional style):**
 ```eyg
-|| {
-  loop = !fix(|loop, foo| {
-    match !int_less_than(foo, 3) {
-      True(_) -> (
-        _ = perform Log(!int_to_string(foo))
-        loop(!int_add(foo, 1))
-      )
-      False(_) -> {}
-    }
-  })
-  loop(0)
-}
+foo = 0
+while (foo < 3) perform Log(foo = foo + 1)
+```
+
+**After (EYG - functional style with recursion):**
+```eyg
+loop = !fix(|loop, foo| {
+  match foo < 3 {
+    True(_) -> (
+      _ = perform Log(foo)
+      loop(foo + 1)
+    )
+    False(_) -> {}
+  }
+})
+loop(0)
 ```
 
 ## New Language Features
@@ -190,7 +187,7 @@ std.list.contains([1], 0)
 
 ### 10. Higher-Order Functions
 ```eyg
-inc = !int_add(1)
+inc = |x| x + 1
 twice = |f, x| { f(f(x)) }
 inc2 = twice(inc)
 ```
