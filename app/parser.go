@@ -138,7 +138,7 @@ func (p *Parser) unary() (Expr, error) {
 	return p.primary()
 }
 
-// statements → expression (";" expression)* | ";"
+// statements → expression (";"? expression)* | ";"
 // ; not required when Block is next
 func (p *Parser) statements() (Expr, error) {
 	var results []Expr
@@ -149,11 +149,7 @@ func (p *Parser) statements() (Expr, error) {
 	line := p.previous().Line
 	results = append(results, expr)
 	for {
-		if p.check(LBRAC) {
-			// Expression is a block
-		} else if !p.match(SEMICOLON) {
-			break
-		}
+		_ = p.match(SEMICOLON)
 		expr, err := p.expression()
 
 		if err != nil {

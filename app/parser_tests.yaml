@@ -113,3 +113,11 @@ parser_tests:
         2
       }
     expected: '(seq (block 1.0) (block 2.0))'
+  - name: "Statement before and after block"
+    input: |
+      1
+      {
+        2
+      }
+      3
+    expected: '(seq 1.0 (block 2.0) 3.0)'

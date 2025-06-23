@@ -241,7 +241,7 @@ func (e *Evaluator) VisitBlock(expr *Block) Value {
 	// Create new scope for block
 	previousScope := e.scope
 	e.scope = NewScope(previousScope)
-	
+
 	var result Value = NilValue{}
 	for _, stmt := range expr.Statements {
 		result = e.Evaluate(stmt)
@@ -252,7 +252,7 @@ func (e *Evaluator) VisitBlock(expr *Block) Value {
 			return result
 		}
 	}
-	
+
 	// Restore previous scope (block scoping)
 	e.scope = previousScope
 	return result
