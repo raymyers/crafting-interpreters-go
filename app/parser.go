@@ -162,7 +162,7 @@ func (p *Parser) call() (Expr, error) {
 // finishCall parses the arguments and creates a Call expression
 func (p *Parser) finishCall(callee Expr) (Expr, error) {
 	var arguments []Expr
-	
+
 	if !p.check(RPAR) {
 		for {
 			arg, err := p.expression()
@@ -170,18 +170,18 @@ func (p *Parser) finishCall(callee Expr) (Expr, error) {
 				return nil, err
 			}
 			arguments = append(arguments, arg)
-			
+
 			if !p.match(COMMA) {
 				break
 			}
 		}
 	}
-	
+
 	paren, err := p.consume(RPAR, "Expect ')' after arguments.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Call{
 		Callee:    callee,
 		Arguments: arguments,
@@ -218,8 +218,9 @@ func (p *Parser) statements() (Expr, error) {
 
 // primary → NUMBER | STRING | "true" | "false" | "nil"
 //
-//	| "(" expression ")" | printStatement | varStatement
-//	| blockStatement | ifStatement | whileStatement | forStatement
+//		| "(" expression ")" | printStatement | varStatement
+//		| blockStatement | ifStatement | whileStatement | forStatement
+//	 | fun
 func (p *Parser) primary() (Expr, error) {
 	if p.match(FALSE) {
 		return &Literal{Value: BoolValue{Val: false}, Line: p.previous().Line}, nil
@@ -304,7 +305,9 @@ func (p *Parser) primary() (Expr, error) {
 	if p.match(LBRAC) {
 		return p.blockStatement()
 	}
-
+	if p.match(FUN) {
+		return p.funStatement()
+	}
 	return nil, fmt.Errorf("expect expression")
 }
 
@@ -330,6 +333,49 @@ func (p *Parser) blockStatement() (Expr, error) {
 	}
 
 	return &Block{Statements: statements, Line: line}, nil
+}
+
+// funStatement → "fun" ident "(" (ident ("," ident)*)? ")" block
+func (p *Parser) funStatement() (Expr, error) {
+	line := p.previous().Line
+	var params []string
+	name, err := p.consume(IDENTIFIER, "expect identifier after fun")
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(LPAR, "expect ( after function name")
+	if err != nil {
+		return nil, err
+	}
+	for !p.check(RPAR) {
+		paramName, err := p.consume(IDENTIFIER, "expect arg name or )")
+		if err != nil {
+			return nil, err
+		}
+
+		params = append(params, paramName.Lexeme)
+		if p.check(COMMA) {
+			p.advance()
+		} else {
+			break
+		}
+	}
+	_, err = p.consume(RPAR, "expect ) after arg list")
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.consume(LBRAC, "expect { after arg list")
+	if err != nil {
+		return nil, err
+	}
+	blockExpr, err := p.blockStatement()
+	if err != nil {
+		return nil, err
+	}
+	if block, ok := blockExpr.(*Block); ok && block != nil {
+		return &Fun{Name: name.Lexeme, Parameters: params, Block: *block, Line: line}, nil
+	}
+	return nil, fmt.Errorf("function body much be a block")
 }
 
 // ifStatement → "if" "(" expression ")" expression ( "else" expression )?

@@ -188,3 +188,8 @@ parser_tests:
     input: |
       for (;;) {}
     expected: '(for nil nil nil (block))'
+  - name: "EmptyFor"
+    input: |
+      fun foo() {
+      }
+    expected: '(fun foo (args) (block))'

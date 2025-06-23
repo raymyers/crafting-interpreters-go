@@ -236,3 +236,9 @@ evaluator_tests:
     input: |
       clock() > 0
     expected: "true"
+  - name: "Clock"
+    input: |
+      fun foo() { print "hello" }
+      foo()
+    expected: "nil"
+    expectedOutput: "hello\n"

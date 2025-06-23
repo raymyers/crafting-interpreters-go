@@ -242,7 +242,10 @@ func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 	case ErrorValue:
 		return result
 	default:
-		fmt.Fprintf(e.output, "%s\n", formatValue(result))
+		_, err := fmt.Fprintf(e.output, "%s\n", formatValue(result))
+		if err != nil {
+			return ErrorValue{Message: "Print failed"}
+		}
 		return NilValue{}
 	}
 }
@@ -275,19 +278,21 @@ func (e *Evaluator) VisitBlock(expr *Block) Value {
 	previousScope := e.scope
 	e.scope = NewScope(previousScope)
 
+	result := e.evalStatements(expr.Statements)
+	// Restore previous scope (block scoping)
+	e.scope = previousScope
+	return result
+}
+
+func (e *Evaluator) evalStatements(statements []Expr) Value {
 	var result Value = NilValue{}
-	for _, stmt := range expr.Statements {
+	for _, stmt := range statements {
 		result = e.Evaluate(stmt)
 		switch result.(type) {
 		case ErrorValue:
-			// Restore previous scope on error
-			e.scope = previousScope
 			return result
 		}
 	}
-
-	// Restore previous scope (block scoping)
-	e.scope = previousScope
 	return result
 }
 
@@ -360,10 +365,25 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 		if len(expr.Arguments) != 0 {
 			return ErrorValue{Message: "clock() takes no arguments", Line: expr.Line}
 		}
-		
+
 		// Return current time in epoch seconds
 		epochSeconds := float64(time.Now().Unix())
 		return NumberValue{Val: epochSeconds}
+	} else if varExpr, ok := expr.Callee.(*Variable); ok {
+		lookup, ok := e.scope.lookup(varExpr.Name.Lexeme)
+		if !ok {
+			return ErrorValue{Message: "undefined function", Line: expr.Line}
+		}
+		if fv, ok := lookup.(FunValue); ok {
+			previousScope := e.scope
+			e.scope = NewScope(previousScope)
+			result := e.evalStatements(fv.Val.Block.Statements)
+			// Restore previous scope (block scoping)
+			e.scope = previousScope
+			return result
+		} else {
+			return ErrorValue{Message: "cannot call a non-function", Line: expr.Line}
+		}
 	}
 
 	// Evaluate the callee for other function calls
@@ -374,6 +394,11 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 
 	// Any other function call is an error
 	return ErrorValue{Message: "Undefined function", Line: expr.Line}
+}
+func (e *Evaluator) VisitFun(expr *Fun) Value {
+	val := FunValue{Val: *expr}
+	e.scope.define(expr.Name, val)
+	return val
 }
 
 // isTruthy determines the truthiness of a value following Lox rules

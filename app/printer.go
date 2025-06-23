@@ -107,6 +107,11 @@ func (ap *AstPrinter) VisitCallExpr(expr *Call) Value {
 	return StringValue{Val: ap.parenthesize("call", args...)}
 }
 
+func (ap *AstPrinter) VisitFun(expr *Fun) Value {
+	args := ap.parenthesizeStrings("args", expr.Parameters...)
+	return StringValue{Val: ap.parenthesizeStrings("fun", expr.Name, args, ap.Print(&expr.Block))}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder

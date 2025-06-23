@@ -31,6 +31,12 @@ type NilValue struct{}
 
 func (NilValue) implValue() {}
 
+type FunValue struct {
+	Val Fun
+}
+
+func (FunValue) implValue() {}
+
 type ErrorValue struct {
 	Message string
 	Line    uint
@@ -58,6 +64,7 @@ type ExprVisitor interface {
 	VisitWhileStatement(expr *WhileStatement) Value
 	VisitForStatement(expr *ForStatement) Value
 	VisitCallExpr(expr *Call) Value
+	VisitFun(expr *Fun) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -197,4 +204,15 @@ type Call struct {
 
 func (c *Call) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitCallExpr(c)
+}
+
+type Fun struct {
+	Name       string
+	Parameters []string
+	Block      Block
+	Line       uint
+}
+
+func (c *Fun) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitFun(c)
 }
