@@ -9,10 +9,18 @@ type Evaluator struct{}
 
 // Evaluate evaluates an expression and returns its value
 func (e *Evaluator) Evaluate(expr Expr) (Value, error) {
+
 	if expr == nil {
 		return NilValue{}, fmt.Errorf("expression is nil")
 	}
-	return expr.Accept(e), nil
+	result := expr.Accept(e)
+	switch result.(type) {
+	case ErrorValue:
+		errorText := fmt.Errorf("[Line %d]\nError: %s", result.(ErrorValue).Line, result.(ErrorValue).Message)
+		return NilValue{}, errorText
+	default:
+		return result, nil
+	}
 }
 
 // VisitLiteralExpr evaluates literal expressions

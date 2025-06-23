@@ -83,11 +83,10 @@ func handleEvaluate(filename string) {
 	evaluator := &Evaluator{}
 	result, evalErr := evaluator.Evaluate(expr)
 	if evalErr != nil {
-		fmt.Fprintf(os.Stderr, "Evaluation error: %v\n", evalErr)
+		fmt.Fprintf(os.Stderr, "%v\n", evalErr)
 		os.Exit(70)
 	}
 
-	// Print the result
 	fmt.Println(formatValue(result))
 }
 
@@ -104,8 +103,6 @@ func formatValue(value Value) string {
 			return "true"
 		}
 		return "false"
-	case ErrorValue:
-		return fmt.Sprintf("[Line %d] Error: %s", v.Line, v.Message)
 	default:
 		return fmt.Sprintf("%v", value)
 	}
