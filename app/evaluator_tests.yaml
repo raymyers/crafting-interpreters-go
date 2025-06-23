@@ -248,3 +248,52 @@ evaluator_tests:
       print foo;
     expected: "nil"
     expectedOutput: "<fn foo>\n"
+  - name: "Function with one argument"
+    input: |
+      fun greet(name) {
+        print "Hello, " + name + "!";
+      }
+      greet("World");
+    expected: "nil"
+    expectedOutput: "Hello, World!\n"
+  - name: "Function with two arguments"
+    input: |
+      fun add(a, b) {
+        print a + b;
+      }
+      add(10, 20);
+    expected: "nil"
+    expectedOutput: "30\n"
+  - name: "Function with three arguments"
+    input: |
+      fun multiply(x, y, z) {
+        print x * y * z;
+      }
+      multiply(2, 3, 4);
+    expected: "nil"
+    expectedOutput: "24\n"
+  - name: "Function with expression arguments"
+    input: |
+      fun add(a, b) {
+        print a + b;
+      }
+      add(5 * 2, 3 + 7);
+    expected: "nil"
+    expectedOutput: "20\n"
+  - name: "Function with wrong argument count"
+    input: |
+      fun add(a, b) {
+        print a + b;
+      }
+      add(1);
+    expected: "Evaluation error: Expected 2 arguments but got 1"
+  - name: "Function arguments are scoped"
+    input: |
+      fun test(x) {
+        var y = x + 1;
+        print y;
+      }
+      test(5);
+      print x;
+    expected: "Evaluation error: Undefined variable 'x'"
+    expectedOutput: "6\n"

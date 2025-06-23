@@ -375,10 +375,37 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 			return ErrorValue{Message: "undefined function", Line: expr.Line}
 		}
 		if fv, ok := lookup.(FunValue); ok {
+			// Check argument count
+			if len(expr.Arguments) != len(fv.Val.Parameters) {
+				return ErrorValue{
+					Message: fmt.Sprintf("Expected %d arguments but got %d", len(fv.Val.Parameters), len(expr.Arguments)),
+					Line:    expr.Line,
+				}
+			}
+
+			// Evaluate arguments
+			argValues := make([]Value, len(expr.Arguments))
+			for i, arg := range expr.Arguments {
+				argValue := e.Evaluate(arg)
+				if _, isError := argValue.(ErrorValue); isError {
+					return argValue
+				}
+				argValues[i] = argValue
+			}
+
+			// Create new scope for function execution
 			previousScope := e.scope
 			e.scope = NewScope(previousScope)
+
+			// Bind parameters to arguments in the new scope
+			for i, paramName := range fv.Val.Parameters {
+				e.scope.define(paramName, argValues[i])
+			}
+
+			// Execute function body
 			result := e.evalStatements(fv.Val.Block.Statements)
-			// Restore previous scope (block scoping)
+
+			// Restore previous scope
 			e.scope = previousScope
 			return result
 		} else {
