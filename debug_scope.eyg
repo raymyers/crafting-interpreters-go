@@ -1,0 +1,9 @@
+a = 1
+perform Log("outer a = 1")
+{
+  perform Log("inner start")
+  a = 2
+  perform Log("inner after assignment")
+}
+perform Log("outer end")
+a

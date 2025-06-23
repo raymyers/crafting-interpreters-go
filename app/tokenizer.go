@@ -346,6 +346,8 @@ func readIdentifier(reader *bufio.Reader, b byte, result []Token) (string, []Tok
 
 func getTokenTypeForIdentifier(identifier string) TokenType {
 	switch identifier {
+	case "_":
+		return UNDERSCORE
 	case "and":
 		return AND
 	case "else":

@@ -1,0 +1,4 @@
+match Cat("felix") {
+  Cat(name) -> name
+  _ -> "wild"
+}

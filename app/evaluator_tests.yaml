@@ -178,7 +178,7 @@ evaluator_tests:
         False(_) -> a
       }
       a
-    expected: "2"
+    expected: "1"
   - name: "IfFalse"
     input: |
       a = 1

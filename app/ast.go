@@ -108,6 +108,7 @@ type ExprVisitor interface {
 	VisitSpread(expr *Spread) Value
 	VisitDestructure(expr *Destructure) Value
 	VisitSeq(expr *Seq) Value
+	VisitWildcard(expr *Wildcard) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -404,4 +405,13 @@ type Seq struct {
 
 func (s *Seq) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitSeq(s)
+}
+
+// Wildcard represents a wildcard pattern (_) in match expressions
+type Wildcard struct {
+	Line uint
+}
+
+func (w *Wildcard) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitWildcard(w)
 }

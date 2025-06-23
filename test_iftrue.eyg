@@ -1,0 +1,6 @@
+a = 1
+match True({}) {
+  True(_) -> a = 2
+  False(_) -> a
+}
+a

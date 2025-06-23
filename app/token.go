@@ -48,6 +48,7 @@ const (
 	PERFORM
 	HANDLE
 	NOT
+	UNDERSCORE
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -92,6 +93,7 @@ var tokenTypeName = map[TokenType]string{
 	PERFORM:       "PERFORM",
 	HANDLE:        "HANDLE",
 	NOT:           "NOT",
+	UNDERSCORE:    "UNDERSCORE",
 }
 
 type Token struct {

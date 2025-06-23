@@ -781,32 +781,8 @@ func (p *Parser) matchExpression() (Expr, error) {
 
 	var cases []MatchCase
 	for !p.check(RBRAC) && !p.isAtEnd() {
-		// Parse pattern: Constructor(params) or Constructor(_)
-		constructor, err := p.consume(IDENTIFIER, "Expect constructor name.")
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = p.consume(LPAR, "Expect '(' after constructor.")
-		if err != nil {
-			return nil, err
-		}
-
-		var params []string
-		if !p.check(RPAR) {
-			for {
-				param, err := p.consume(IDENTIFIER, "Expect parameter name.")
-				if err != nil {
-					return nil, err
-				}
-				params = append(params, param.Lexeme)
-				if !p.match(COMMA) {
-					break
-				}
-			}
-		}
-
-		_, err = p.consume(RPAR, "Expect ')' after parameters.")
+		// Parse pattern
+		pattern, err := p.parsePattern()
 		if err != nil {
 			return nil, err
 		}
@@ -821,8 +797,6 @@ func (p *Parser) matchExpression() (Expr, error) {
 			return nil, err
 		}
 
-		// Create pattern expression
-		pattern := &Union{Constructor: constructor.Lexeme, Value: &Variable{Name: Token{Lexeme: strings.Join(params, " ")}, Line: constructor.Line}, Line: constructor.Line}
 		cases = append(cases, MatchCase{Pattern: pattern, Body: body})
 	}
 
@@ -832,6 +806,59 @@ func (p *Parser) matchExpression() (Expr, error) {
 	}
 
 	return &Match{Value: value, Cases: cases, Line: line}, nil
+}
+
+// parsePattern parses a pattern in a match expression
+func (p *Parser) parsePattern() (Expr, error) {
+	// Handle wildcard pattern
+	if p.match(UNDERSCORE) {
+		return &Wildcard{Line: p.previous().Line}, nil
+	}
+
+	// Handle constructor patterns: Constructor(params)
+	if p.check(IDENTIFIER) {
+		constructor := p.advance()
+		
+		// Check if this is followed by parentheses (constructor pattern)
+		if p.match(LPAR) {
+			var params []string
+			if !p.check(RPAR) {
+				for {
+					if p.match(UNDERSCORE) {
+						params = append(params, "_")
+					} else {
+						param, err := p.consume(IDENTIFIER, "Expect parameter name or '_'.")
+						if err != nil {
+							return nil, err
+						}
+						params = append(params, param.Lexeme)
+					}
+					if !p.match(COMMA) {
+						break
+					}
+				}
+			}
+
+			_, err := p.consume(RPAR, "Expect ')' after parameters.")
+			if err != nil {
+				return nil, err
+			}
+
+			// Create a constructor pattern
+			// For now, we'll represent this as a Union with a special marker
+			// The evaluator will need to handle pattern matching logic
+			return &Union{
+				Constructor: constructor.Lexeme, 
+				Value: &Variable{Name: Token{Lexeme: strings.Join(params, ","), Type: IDENTIFIER}, Line: constructor.Line}, 
+				Line: constructor.Line,
+			}, nil
+		} else {
+			// Simple variable pattern
+			return &Variable{Name: constructor, Line: constructor.Line}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Expected pattern")
 }
 
 // handleExpression → "handle" identifier "(" expression "," expression ")"

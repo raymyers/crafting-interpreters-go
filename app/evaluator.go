@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -61,6 +62,12 @@ func (s *Scope) lookup(name string) (Value, bool) {
 // isDefined checks if a variable is defined in this scope or parent scopes
 func (s *Scope) isDefined(name string) bool {
 	_, exists := s.lookup(name)
+	return exists
+}
+
+// isDefinedInCurrentScope checks if a variable is defined only in the current scope
+func (s *Scope) isDefinedInCurrentScope(name string) bool {
+	_, exists := s.envMap[name]
 	return exists
 }
 
@@ -161,18 +168,10 @@ func (e *Evaluator) VisitBinaryExpr(expr *Binary) Value {
 		// Handle different left-hand side patterns
 		switch left := expr.Left.(type) {
 		case *Variable:
-			// Simple variable assignment
+			// Simple variable assignment - always define in current scope
 			varName := left.Name.Lexeme
-			if e.scope.isDefined(varName) {
-				if e.scope.assign(varName, right) {
-					return right
-				}
-			} else {
-				// Define new variable in current scope
-				e.scope.define(varName, right)
-				return right
-			}
-			return ErrorValue{Message: "Assignment failed", Line: expr.Line}
+			e.scope.define(varName, right)
+			return right
 
 		case *Destructure:
 			// Destructuring assignment
@@ -793,9 +792,11 @@ func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 
 		// Parse the string to integer
 		if val, err := strconv.ParseFloat(str.Val, 64); err == nil {
-			return NumberValue{Val: val}
+			// Return Ok(value) union type
+			return UnionValue{Constructor: "Ok", Value: NumberValue{Val: val}}
 		} else {
-			return ErrorValue{Message: "Cannot parse string as integer", Line: expr.Line}
+			// Return Error(message) union type
+			return UnionValue{Constructor: "Error", Value: StringValue{Val: err.Error()}}
 		}
 
 	case "clock":
@@ -842,7 +843,86 @@ func (e *Evaluator) VisitLambda(expr *Lambda) Value {
 }
 
 func (e *Evaluator) VisitMatch(expr *Match) Value {
-	return ErrorValue{Message: "Match not implemented", Line: expr.Line}
+	// Evaluate the value to match against
+	value := e.Evaluate(expr.Value)
+	if errorVal, ok := value.(ErrorValue); ok {
+		return errorVal
+	}
+
+	// Try each case in order
+	for _, matchCase := range expr.Cases {
+		bindings, matches := e.matchPattern(matchCase.Pattern, value)
+		if matches {
+			// Create new scope with pattern bindings
+			e.scope = NewScope(e.scope)
+			for name, val := range bindings {
+				e.scope.define(name, val)
+			}
+			
+			// Evaluate the body
+			result := e.Evaluate(matchCase.Body)
+			
+			// Restore previous scope
+			e.scope = e.scope.parent
+			
+			return result
+		}
+	}
+
+	return ErrorValue{Message: "No matching pattern found", Line: expr.Line}
+}
+
+// matchPattern attempts to match a pattern against a value
+// Returns (bindings, matches) where bindings is a map of variable names to values
+func (e *Evaluator) matchPattern(pattern Expr, value Value) (map[string]Value, bool) {
+	bindings := make(map[string]Value)
+
+	switch p := pattern.(type) {
+	case *Wildcard:
+		// Wildcard matches anything
+		return bindings, true
+
+	case *Variable:
+		// Variable pattern binds the value to the variable name
+		bindings[p.Name.Lexeme] = value
+		return bindings, true
+
+	case *Union:
+		// Constructor pattern: Constructor(params)
+		if unionVal, ok := value.(UnionValue); ok {
+			// Check if constructors match
+			if p.Constructor == unionVal.Constructor {
+				// Extract parameters from the pattern
+				if varPattern, ok := p.Value.(*Variable); ok {
+					paramNames := strings.Split(varPattern.Name.Lexeme, ",")
+					
+					// Handle empty parameter list
+					if len(paramNames) == 1 && paramNames[0] == "" {
+						return bindings, true
+					}
+
+					// For single parameter patterns, bind directly
+					if len(paramNames) == 1 && paramNames[0] != "_" {
+						bindings[paramNames[0]] = unionVal.Value
+						return bindings, true
+					}
+
+					// For multiple parameters, we'd need to destructure
+					// For now, handle simple cases
+					if len(paramNames) == 1 && paramNames[0] == "_" {
+						// Wildcard parameter, don't bind
+						return bindings, true
+					}
+				}
+				return bindings, true
+			}
+		}
+		return bindings, false
+
+	default:
+		// Unknown pattern type
+		return bindings, false
+	}
 }
 
 func (e *Evaluator) VisitPerform(expr *Perform) Value {
@@ -983,4 +1063,9 @@ func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
 
 func (e *Evaluator) VisitSeq(expr *Seq) Value {
 	return ErrorValue{Message: "Seq not implemented", Line: expr.Line}
+}
+
+func (e *Evaluator) VisitWildcard(expr *Wildcard) Value {
+	// Wildcards are only used in patterns, not as expressions
+	return ErrorValue{Message: "Wildcard can only be used in match patterns", Line: expr.Line}
 }

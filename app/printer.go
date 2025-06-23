@@ -236,3 +236,7 @@ func (ap *AstPrinter) VisitDestructure(expr *Destructure) Value {
 func (ap *AstPrinter) VisitSeq(expr *Seq) Value {
 	return StringValue{Val: fmt.Sprintf("(seq %s %s)", expr.Left.Accept(ap).(StringValue).Val, expr.Right.Accept(ap).(StringValue).Val)}
 }
+
+func (ap *AstPrinter) VisitWildcard(expr *Wildcard) Value {
+	return StringValue{Val: "_"}
+}
