@@ -64,10 +64,12 @@ type ListValue struct {
 func (ListValue) implValue() {}
 
 type LambdaValue struct {
-	Parameters []string
-	Body       Expr
-	Closure    *Scope
-	Builtin    func([]Value) Value // For builtin functions
+	Parameters      []string
+	Body            Expr
+	Closure         *Scope
+	Builtin         func([]Value) Value // For builtin functions
+	PartialArgs     []Value             // For currying - partially applied arguments
+	PartialParams   []string            // For currying - remaining parameters
 }
 
 func (LambdaValue) implValue() {}

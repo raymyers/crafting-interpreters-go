@@ -1,0 +1,4 @@
+add = |a, b| {
+  perform Log(a + b)
+}
+add(1)

@@ -27,9 +27,9 @@ func NewDefaultScope(output io.Writer) *Scope {
 
 	// Define the Log effect
 	logEffect := LambdaValue{
-		Parameters: []string{"value"},
-		Body:       nil, // Builtin function, no body
-		Closure:    nil,
+		Parameters:    []string{"value"},
+		Body:          nil, // Builtin function, no body
+		Closure:       nil,
 		Builtin: func(args []Value) Value {
 			if len(args) != 1 {
 				return ErrorValue{Message: "Log expects exactly 1 argument", Line: 0}
@@ -468,44 +468,8 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 			e.scope = previousScope
 			return result
 		} else if lv, ok := lookup.(LambdaValue); ok {
-			// Handle lambda function call
-			if len(lv.Parameters) != len(expr.Arguments) {
-				return ErrorValue{
-					Message: fmt.Sprintf("Expected %d arguments but got %d", len(lv.Parameters), len(expr.Arguments)),
-					Line:    expr.Line,
-				}
-			}
-
-			// Evaluate arguments
-			argValues := make([]Value, len(expr.Arguments))
-			for i, arg := range expr.Arguments {
-				argValue := e.Evaluate(arg)
-				if _, isError := argValue.(ErrorValue); isError {
-					return argValue
-				}
-				argValues[i] = argValue
-			}
-
-			// Check if this is a builtin function
-			if lv.Builtin != nil {
-				return lv.Builtin(argValues)
-			}
-
-			// Create new scope for lambda execution (based on closure)
-			previousScope := e.scope
-			e.scope = NewScope(lv.Closure)
-
-			// Bind parameters to arguments in the new scope
-			for i, paramName := range lv.Parameters {
-				e.scope.define(paramName, argValues[i])
-			}
-
-			// Execute lambda body
-			result := e.Evaluate(lv.Body)
-
-			// Restore previous scope
-			e.scope = previousScope
-			return result
+			// Handle lambda function call with currying support
+			return e.callLambda(lv, expr.Arguments, expr.Line)
 		} else {
 			return ErrorValue{Message: "cannot call a non-function", Line: expr.Line}
 		}
@@ -553,48 +517,75 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 		e.scope = previousScope
 		return result
 	} else if lv, ok := callee.(LambdaValue); ok {
-		// Handle lambda function call
-		if len(lv.Parameters) != len(expr.Arguments) {
-			return ErrorValue{
-				Message: fmt.Sprintf("Expected %d arguments but got %d", len(lv.Parameters), len(expr.Arguments)),
-				Line:    expr.Line,
-			}
-		}
-
-		// Evaluate arguments
-		argValues := make([]Value, len(expr.Arguments))
-		for i, arg := range expr.Arguments {
-			argValue := e.Evaluate(arg)
-			if _, isError := argValue.(ErrorValue); isError {
-				return argValue
-			}
-			argValues[i] = argValue
-		}
-
-		// Check if this is a builtin function
-		if lv.Builtin != nil {
-			return lv.Builtin(argValues)
-		}
-
-		// Create new scope for lambda execution (based on closure)
-		previousScope := e.scope
-		e.scope = NewScope(lv.Closure)
-
-		// Bind parameters to arguments in the new scope
-		for i, paramName := range lv.Parameters {
-			e.scope.define(paramName, argValues[i])
-		}
-
-		// Execute lambda body
-		result := e.Evaluate(lv.Body)
-
-		// Restore previous scope
-		e.scope = previousScope
-		return result
+		// Handle lambda function call with currying support
+		return e.callLambda(lv, expr.Arguments, expr.Line)
 	} else {
 		return ErrorValue{Message: "cannot call a non-function", Line: expr.Line}
 	}
 }
+
+// callLambda handles lambda function calls with currying support
+func (e *Evaluator) callLambda(lv LambdaValue, arguments []Expr, line uint) Value {
+	// Get partial arguments
+	partialArgs := lv.PartialArgs
+	
+	// Evaluate the new arguments
+	newArgValues := make([]Value, len(arguments))
+	for i, arg := range arguments {
+		argValue := e.Evaluate(arg)
+		if _, isError := argValue.(ErrorValue); isError {
+			return argValue
+		}
+		newArgValues[i] = argValue
+	}
+	
+	// Combine partial arguments with new arguments
+	allArgs := append(partialArgs, newArgValues...)
+	
+	// Check if we have enough arguments to call the function
+	if len(allArgs) < len(lv.Parameters) {
+		// Not enough arguments - return a partially applied function
+		remainingParams := lv.Parameters[len(allArgs):]
+		return LambdaValue{
+			Parameters:    lv.Parameters,    // Keep original parameters
+			Body:          lv.Body,
+			Closure:       lv.Closure,
+			Builtin:       lv.Builtin,
+			PartialArgs:   allArgs,          // Store all arguments so far
+			PartialParams: remainingParams,  // Store remaining parameters
+		}
+	}
+	
+	// We have enough arguments - check for exact match or too many
+	if len(allArgs) > len(lv.Parameters) {
+		return ErrorValue{
+			Message: fmt.Sprintf("Too many arguments: expected %d but got %d", len(lv.Parameters), len(allArgs)),
+			Line:    line,
+		}
+	}
+	
+	// Check if this is a builtin function
+	if lv.Builtin != nil {
+		return lv.Builtin(allArgs)
+	}
+	
+	// Create new scope for lambda execution (based on closure)
+	previousScope := e.scope
+	e.scope = NewScope(lv.Closure)
+	
+	// Bind parameters to arguments in the new scope
+	for i, paramName := range lv.Parameters {
+		e.scope.define(paramName, allArgs[i])
+	}
+	
+	// Execute lambda body
+	result := e.Evaluate(lv.Body)
+	
+	// Restore previous scope
+	e.scope = previousScope
+	return result
+}
+
 func (e *Evaluator) VisitFun(expr *Fun) Value {
 	val := FunValue{Val: *expr}
 	e.scope.define(expr.Name, val)
@@ -841,9 +832,12 @@ func (e *Evaluator) VisitUnion(expr *Union) Value {
 
 func (e *Evaluator) VisitLambda(expr *Lambda) Value {
 	return LambdaValue{
-		Parameters: expr.Parameters,
-		Body:       expr.Body,
-		Closure:    e.scope,
+		Parameters:    expr.Parameters,
+		Body:          expr.Body,
+		Closure:       e.scope,
+		Builtin:       nil,
+		PartialArgs:   nil,
+		PartialParams: nil,
 	}
 }
 
@@ -934,9 +928,9 @@ func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
 		// Create a std library with list.contains function
 		// Use LambdaValue to represent the builtin function
 		containsFunc := LambdaValue{
-			Parameters: []string{"list", "item"},
-			Body:       nil, // Special marker for builtin
-			Closure:    nil,
+			Parameters:    []string{"list", "item"},
+			Body:          nil, // Special marker for builtin
+			Closure:       nil,
 			Builtin: func(args []Value) Value {
 				if len(args) != 2 {
 					return ErrorValue{Message: "contains expects 2 arguments", Line: expr.Line}

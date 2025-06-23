@@ -252,13 +252,13 @@ evaluator_tests:
       add(5 * 2, 3 + 7)
     expected: "{}"
     expectedOutput: "20\n"
-  - name: "Function with wrong argument count"
+  - name: "Function with partial application"
     input: |
       add = |a, b| {
         perform Log(a + b)
       }
       add(1)
-    expected: "Evaluation error: Expected 2 arguments but got 1"
+    expected: "<lambda>"
   - name: "Function arguments are scoped"
     input: |
       test = |x| {
