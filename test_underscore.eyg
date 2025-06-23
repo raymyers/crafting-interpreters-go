@@ -1,0 +1,2 @@
+_ = perform Log("a")
+perform Log("b")

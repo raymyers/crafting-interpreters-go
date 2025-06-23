@@ -365,6 +365,11 @@ func (p *Parser) primary() (Expr, error) {
 		return &Variable{Name: token, Line: token.Line}, nil
 	}
 
+	if p.match(UNDERSCORE) {
+		token := p.previous()
+		return &Variable{Name: token, Line: token.Line}, nil
+	}
+
 	if p.match(LBRAC) {
 		return p.recordOrBlock()
 	}
@@ -698,11 +703,15 @@ func (p *Parser) lambda() (Expr, error) {
 	var parameters []string
 	if !p.check(PIPE) {
 		for {
-			param, err := p.consume(IDENTIFIER, "Expect parameter name.")
-			if err != nil {
-				return nil, err
+			if p.match(UNDERSCORE) {
+				parameters = append(parameters, "_")
+			} else {
+				param, err := p.consume(IDENTIFIER, "Expect parameter name.")
+				if err != nil {
+					return nil, err
+				}
+				parameters = append(parameters, param.Lexeme)
 			}
-			parameters = append(parameters, param.Lexeme)
 			if !p.match(COMMA) {
 				break
 			}
