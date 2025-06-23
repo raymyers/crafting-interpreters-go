@@ -151,6 +151,8 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			// Skip
 		case '\n':
 			lineNo++
+		case '\r':
+			// Skip
 		case '"':
 			// String literal
 			var stringValue strings.Builder

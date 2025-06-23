@@ -104,3 +104,12 @@ parser_tests:
         print "b";
       }
     expected: '(block (print a) (print b))'
+  - name: "Blocks"
+    input: |
+      {
+        1
+      }
+      {
+        2
+      }
+    expected: '(seq (block 1.0) (block 2.0))'

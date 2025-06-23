@@ -139,6 +139,7 @@ func (p *Parser) unary() (Expr, error) {
 }
 
 // statements → expression (";" expression)* | ";"
+// ; not required when Block is next
 func (p *Parser) statements() (Expr, error) {
 	var results []Expr
 	expr, err := p.expression()
@@ -148,7 +149,9 @@ func (p *Parser) statements() (Expr, error) {
 	line := p.previous().Line
 	results = append(results, expr)
 	for {
-		if !p.match(SEMICOLON) {
+		if p.check(LBRAC) {
+			// Expression is a block
+		} else if !p.match(SEMICOLON) {
 			break
 		}
 		expr, err := p.expression()
@@ -250,23 +253,23 @@ func (p *Parser) primary() (Expr, error) {
 func (p *Parser) blockStatement() (Expr, error) {
 	line := p.previous().Line
 	var statements []Expr
-	
+
 	for !p.check(RBRAC) && !p.isAtEnd() {
 		stmt, err := p.expression()
 		if err != nil {
 			return nil, err
 		}
 		statements = append(statements, stmt)
-		
+
 		// Optional semicolon after each statement
 		p.match(SEMICOLON)
 	}
-	
+
 	_, err := p.consume(RBRAC, "Expect '}' after block.")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Block{Statements: statements, Line: line}, nil
 }
 

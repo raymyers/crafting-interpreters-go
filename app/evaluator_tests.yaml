@@ -154,7 +154,7 @@ evaluator_tests:
       {
         var a = {
           1 + 1
-        }
+        };
         a
       }
     expected: "2"
