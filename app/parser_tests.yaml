@@ -148,3 +148,16 @@ parser_tests:
     input: |
       true and false
     expected: '(and true false)'
+  
+  - name: "While"
+    input: |
+      while (x < 3) print x;
+    expected: '(while (< x 3.0) (print x))'
+  
+  - name: "WhileBlock"
+    input: |
+      while (x < 10) {
+        print x;
+        x = x + 1;
+      }
+    expected: '(while (< x 10.0) (block (print x) (= x (+ x 1.0))))'

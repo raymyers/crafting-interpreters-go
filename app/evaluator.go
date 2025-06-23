@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // Scope represents a variable scope with optional parent scope
 type Scope struct {
@@ -52,7 +55,16 @@ func (s *Scope) assign(name string, value Value) bool {
 
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct {
-	scope *Scope
+	scope  *Scope
+	output io.Writer
+}
+
+// NewEvaluator creates a new evaluator with the given scope and output writer
+func NewEvaluator(scope *Scope, output io.Writer) *Evaluator {
+	return &Evaluator{
+		scope:  scope,
+		output: output,
+	}
 }
 
 // Evaluate evaluates an expression and returns its value
@@ -229,7 +241,7 @@ func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
 	case ErrorValue:
 		return result
 	default:
-		fmt.Printf("%s\n", formatValue(result))
+		fmt.Fprintf(e.output, "%s\n", formatValue(result))
 		return NilValue{}
 	}
 }
@@ -288,6 +300,26 @@ func (e *Evaluator) VisitIfStatement(expr *IfStatement) Value {
 		return e.Evaluate(expr.ThenBranch)
 	} else if expr.ElseBranch != nil {
 		return e.Evaluate(expr.ElseBranch)
+	}
+
+	return NilValue{}
+}
+
+func (e *Evaluator) VisitWhileStatement(expr *WhileStatement) Value {
+	for {
+		conditionValue := e.Evaluate(expr.Condition)
+		if _, isError := conditionValue.(ErrorValue); isError {
+			return conditionValue
+		}
+
+		if !isTruthy(conditionValue) {
+			break
+		}
+
+		bodyResult := e.Evaluate(expr.Body)
+		if _, isError := bodyResult.(ErrorValue); isError {
+			return bodyResult
+		}
 	}
 
 	return NilValue{}

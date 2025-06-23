@@ -237,6 +237,10 @@ func (p *Parser) primary() (Expr, error) {
 		return p.ifStatement()
 	}
 
+	if p.match(WHILE) {
+		return p.whileStatement()
+	}
+
 	if p.match(IDENTIFIER) {
 		token := p.previous()
 		return &Variable{Name: token, Line: token.Line}, nil
@@ -311,6 +315,37 @@ func (p *Parser) ifStatement() (Expr, error) {
 		ThenBranch: thenBranch,
 		ElseBranch: elseBranch,
 		Line:       line,
+	}, nil
+}
+
+// whileStatement → "while" "(" expression ")" expression
+func (p *Parser) whileStatement() (Expr, error) {
+	line := p.previous().Line
+
+	_, err := p.consume(LPAR, "Expect '(' after 'while'.")
+	if err != nil {
+		return nil, err
+	}
+
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(RPAR, "Expect ')' after while condition.")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	return &WhileStatement{
+		Condition: condition,
+		Body:      body,
+		Line:      line,
 	}, nil
 }
 

@@ -93,6 +93,10 @@ func (ap *AstPrinter) VisitIfStatement(expr *IfStatement) Value {
 	return StringValue{Val: ap.parenthesize("if", expr.Condition, expr.ThenBranch)}
 }
 
+func (ap *AstPrinter) VisitWhileStatement(expr *WhileStatement) Value {
+	return StringValue{Val: ap.parenthesize("while", expr.Condition, expr.Body)}
+}
+
 // parenthesize wraps expressions in parentheses with the operator/name first
 func (ap *AstPrinter) parenthesize(name string, exprs ...Expr) string {
 	var builder strings.Builder

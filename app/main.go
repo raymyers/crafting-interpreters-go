@@ -82,7 +82,7 @@ func handleEvaluate(filename string, printResult bool) {
 	}
 
 	// Evaluate the expression
-	evaluator := &Evaluator{scope: NewScope(nil)}
+	evaluator := NewEvaluator(NewScope(nil), os.Stdout)
 	result := evaluator.Evaluate(expr)
 	switch result.(type) {
 	case ErrorValue:

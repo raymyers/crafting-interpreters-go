@@ -1,13 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 )
 
-func evaluateToString(input string) string {
+func evaluateToString(input string, output *bytes.Buffer) string {
 	tokens, err := TokenizeString(input)
 	if err != nil {
 		return "Tokenization error: " + err.Error()
@@ -19,7 +20,7 @@ func evaluateToString(input string) string {
 		return "Parse error: " + err.Error()
 	}
 
-	evaluator := &Evaluator{scope: NewScope(nil)}
+	evaluator := NewEvaluator(NewScope(nil), output)
 	result := evaluator.Evaluate(expr)
 	if ev, isErrVal := result.(ErrorValue); isErrVal {
 		return "Evaluation error: " + ev.Message
@@ -29,9 +30,10 @@ func evaluateToString(input string) string {
 }
 
 type EvaluatorTestCase struct {
-	Name     string `yaml:"name"`
-	Input    string `yaml:"input"`
-	Expected string `yaml:"expected"`
+	Name           string `yaml:"name"`
+	Input          string `yaml:"input"`
+	Expected       string `yaml:"expected"`
+	ExpectedOutput string `yaml:"expectedOutput"`
 }
 
 type EvaluatorTestSuite struct {
@@ -63,9 +65,20 @@ func TestEvaluatorCases(t *testing.T) {
 		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			t.Parallel()
-			result := evaluateToString(tc.Input)
+			var output bytes.Buffer
+			result := evaluateToString(tc.Input, &output)
+
+			// Check the return value
 			if result != tc.Expected {
-				t.Errorf("Test %s failed: expected %q, got %q", tc.Name, tc.Expected, result)
+				t.Errorf("Test %s failed: expected result %q, got %q", tc.Name, tc.Expected, result)
+			}
+
+			// Check the output if expectedOutput is specified
+			if tc.ExpectedOutput != "" {
+				actualOutput := output.String()
+				if actualOutput != tc.ExpectedOutput {
+					t.Errorf("Test %s failed: expected output %q, got %q", tc.Name, tc.ExpectedOutput, actualOutput)
+				}
 			}
 		})
 	}

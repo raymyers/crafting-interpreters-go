@@ -213,3 +213,12 @@ evaluator_tests:
     input: |
       false and 56
     expected: "false"
+  - name: "While"
+    input: |
+      var foo = 0;
+      while (foo < 3) print foo = foo + 1;
+    expected: "nil"
+    expectedOutput: |
+      1
+      2
+      3

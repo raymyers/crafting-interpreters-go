@@ -24,7 +24,7 @@ $(BUILD_DIR):
 # Run tests
 .PHONY: test
 test:
-	go test ./$(APP_DIR) -v
+	go test ./$(APP_DIR)
 
 # Run tests with coverage
 .PHONY: test-coverage
