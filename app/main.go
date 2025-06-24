@@ -243,7 +243,7 @@ func handleIR(filename string) {
 			fmt.Fprintf(os.Stderr, "Error reading from stdin: %v\n", err)
 			os.Exit(65)
 		}
-		
+
 		// Tokenize the input string
 		tokens, tokenizeErr = TokenizeString(input)
 	} else {

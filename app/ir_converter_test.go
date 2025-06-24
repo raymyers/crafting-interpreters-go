@@ -33,19 +33,19 @@ func TestIRConverterWithFixture(t *testing.T) {
 		"empty list":   true,
 		"empty record": true,
 		// The following are not directly testable with our current parser
-		"binary":         false,
-		"list cons":      false,
-		"vacant":         false,
-		"extend record":  false,
-		"select field":   false,
-		"tag":            false,
-		"match":          false,
-		"no match":       false,
-		"perform effect": false,
-		"handle effect":  false,
+		"binary":              false,
+		"list cons":           false,
+		"vacant":              false,
+		"extend record":       false,
+		"select field":        false,
+		"tag":                 false,
+		"match":               false,
+		"no match":            false,
+		"perform effect":      false,
+		"handle effect":       false,
 		"add integer builtin": false,
-		"cid reference":  false,
-		"release":        false,
+		"cid reference":       false,
+		"release":             false,
 	}
 
 	// Run tests for each fixture example that is testable
@@ -121,7 +121,7 @@ func TestIRCommandWithStdin(t *testing.T) {
 
 	// Test with a variable expression from the fixture
 	testNode := fixtureNodes[0] // variable "foo"
-	
+
 	// Create a temporary file for testing
 	tmpfile, err := os.CreateTemp("", "test-*.eyg")
 	if err != nil {
