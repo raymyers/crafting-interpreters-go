@@ -844,18 +844,70 @@ func (s *State) builtinIntAbsolute(args ...Value) {
 }
 
 func (s *State) builtinIntParse(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("int_parse not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("int_parse expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	str, ok := args[0].(string)
+	if !ok {
+		s.Break = fmt.Errorf("int_parse expects string argument")
+		return
+	}
+	
+	// Try to parse as integer
+	var n float64
+	if _, err := fmt.Sscanf(str, "%f", &n); err != nil {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	// Check if it's actually an integer (no decimal part)
+	if n != float64(int(n)) {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	// Check if the string representation matches exactly (no extra characters)
+	expected := fmt.Sprintf("%.0f", n)
+	if str != expected {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	s.SetValue(&Tagged{Tag: "Ok", Value: n})
 }
 
 func (s *State) builtinIntToString(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("int_to_string not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("int_to_string expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	a, ok := args[0].(float64)
+	if !ok {
+		s.Break = fmt.Errorf("int_to_string expects integer argument")
+		return
+	}
+	
+	result := fmt.Sprintf("%.0f", a)
+	s.SetValue(result)
 }
 
 func (s *State) builtinStringAppend(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_append not implemented")
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("string_append expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(string)
+	b, okB := args[1].(string)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("string_append expects string arguments")
+		return
+	}
+	
+	s.SetValue(a + b)
 }
 
 func (s *State) builtinStringSplit(args ...Value) {
@@ -894,18 +946,78 @@ func (s *State) builtinStringStartsWith(args ...Value) {
 }
 
 func (s *State) builtinStringLength(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_length not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("string_length expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	a, ok := args[0].(string)
+	if !ok {
+		s.Break = fmt.Errorf("string_length expects string argument")
+		return
+	}
+	
+	s.SetValue(float64(len(a)))
 }
 
 func (s *State) builtinListPop(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("list_pop not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("list_pop expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	list, ok := args[0].([]Value)
+	if !ok {
+		s.Break = fmt.Errorf("list_pop expects list argument")
+		return
+	}
+	
+	if len(list) == 0 {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+	} else {
+		head := list[0]
+		tail := list[1:]
+		result := make(map[string]Value)
+		result["head"] = head
+		result["tail"] = tail
+		s.SetValue(&Tagged{Tag: "Ok", Value: result})
+	}
 }
 
 func (s *State) builtinListFold(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("list_fold not implemented")
+	if len(args) != 3 {
+		s.Break = fmt.Errorf("list_fold expects 3 arguments, got %d", len(args))
+		return
+	}
+	
+	list, ok := args[0].([]Value)
+	if !ok {
+		s.Break = fmt.Errorf("list_fold expects list as first argument")
+		return
+	}
+	
+	state := args[1]
+	fn := args[2]
+	
+	if len(list) == 0 {
+		s.SetValue(state)
+		return
+	}
+	
+	// Recursive implementation: fold(tail, fn(head, state), fn)
+	head := list[0]
+	tail := list[1:]
+	
+	// Set up the continuation stack for the recursive call
+	s.Push(CallCont{Arg: fn, Env: s.copyEnv()})
+	s.Push(ApplyCont{Func: &Partial{
+		Exp: Expression{"0": BUILTIN, "l": "list_fold"},
+		Applied: []Value{tail},
+		Impl: func(s *State, args ...Value) { s.builtinListFold(args...) },
+	}, Env: s.copyEnv()})
+	s.Push(CallCont{Arg: state, Env: s.copyEnv()})
+	s.Push(CallCont{Arg: head, Env: s.copyEnv()})
+	s.SetValue(fn)
 }
 
 // Helper function for value equality
