@@ -183,12 +183,12 @@ func TestCoreSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/core_suite.json", t)
 }
 
-// Commented out for now - we'll enable these as we implement more features
-/*
 func TestBuiltinsSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/builtins_suite.json", t)
 }
 
+// Commented out for now - we'll enable this as we implement effects
+/*
 func TestEffectsSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/effects_suite.json", t)
 }

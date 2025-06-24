@@ -474,9 +474,48 @@ func (s *State) getRequiredArgs(expr Expression) int {
 		return 3
 	case HANDLE:
 		return 2
+	case BUILTIN:
+		label, ok := expr["l"].(string)
+		if !ok {
+			return 1
+		}
+		return s.getBuiltinArgCount(label)
 	default:
 		return 1
 	}
+}
+
+// getBuiltinArgCount returns the number of arguments required for a builtin
+func (s *State) getBuiltinArgCount(name string) int {
+	argCounts := map[string]int{
+		"equal":        2,
+		"fix":          1,
+		"fixed":        2,
+		"int_compare":  2,
+		"int_add":      2,
+		"int_subtract": 2,
+		"int_multiply": 2,
+		"int_divide":   2,
+		"int_absolute": 1,
+		"int_parse":    1,
+		"int_to_string": 1,
+		"string_append": 2,
+		"string_split": 2,
+		"string_split_once": 2,
+		"string_replace": 3,
+		"string_uppercase": 1,
+		"string_lowercase": 1,
+		"string_ends_with": 2,
+		"string_starts_with": 2,
+		"string_length": 1,
+		"list_pop": 1,
+		"list_fold": 3,
+	}
+	
+	if count, exists := argCounts[name]; exists {
+		return count
+	}
+	return 1
 }
 
 func (s *State) copyEnvFrom(src Environment) Environment {
@@ -604,9 +643,32 @@ func (s *State) handle(label string) func(*State, ...Value) {
 }
 
 func (s *State) getBuiltin(name string) func(*State, ...Value) {
-	// For now, return nil for all builtins
-	// We'll implement these as needed
-	return nil
+	builtins := map[string]func(*State, ...Value){
+		"equal":        func(s *State, args ...Value) { s.builtinEqual(args...) },
+		"fix":          func(s *State, args ...Value) { s.builtinFix(args...) },
+		"fixed":        func(s *State, args ...Value) { s.builtinFixed(args...) },
+		"int_compare":  func(s *State, args ...Value) { s.builtinIntCompare(args...) },
+		"int_add":      func(s *State, args ...Value) { s.builtinIntAdd(args...) },
+		"int_subtract": func(s *State, args ...Value) { s.builtinIntSubtract(args...) },
+		"int_multiply": func(s *State, args ...Value) { s.builtinIntMultiply(args...) },
+		"int_divide":   func(s *State, args ...Value) { s.builtinIntDivide(args...) },
+		"int_absolute": func(s *State, args ...Value) { s.builtinIntAbsolute(args...) },
+		"int_parse":    func(s *State, args ...Value) { s.builtinIntParse(args...) },
+		"int_to_string": func(s *State, args ...Value) { s.builtinIntToString(args...) },
+		"string_append": func(s *State, args ...Value) { s.builtinStringAppend(args...) },
+		"string_split": func(s *State, args ...Value) { s.builtinStringSplit(args...) },
+		"string_split_once": func(s *State, args ...Value) { s.builtinStringSplitOnce(args...) },
+		"string_replace": func(s *State, args ...Value) { s.builtinStringReplace(args...) },
+		"string_uppercase": func(s *State, args ...Value) { s.builtinStringUppercase(args...) },
+		"string_lowercase": func(s *State, args ...Value) { s.builtinStringLowercase(args...) },
+		"string_ends_with": func(s *State, args ...Value) { s.builtinStringEndsWith(args...) },
+		"string_starts_with": func(s *State, args ...Value) { s.builtinStringStartsWith(args...) },
+		"string_length": func(s *State, args ...Value) { s.builtinStringLength(args...) },
+		"list_pop": func(s *State, args ...Value) { s.builtinListPop(args...) },
+		"list_fold": func(s *State, args ...Value) { s.builtinListFold(args...) },
+	}
+	
+	return builtins[name]
 }
 
 // Eval evaluates an expression and returns the final state
@@ -614,4 +676,280 @@ func Eval(src Expression) *State {
 	state := NewState(src)
 	state.Loop()
 	return state
+}
+
+// Builtin function implementations
+func (s *State) builtinEqual(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("equal expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, b := args[0], args[1]
+	isEqual := s.valuesEqual(a, b)
+	
+	if isEqual {
+		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
+	} else {
+		s.SetValue(&Tagged{Tag: "False", Value: make(map[string]Value)})
+	}
+}
+
+func (s *State) builtinFix(args ...Value) {
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("fix expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	builder := args[0]
+	// Create a fixed point combinator
+	// This is a simplified implementation
+	s.Push(CallCont{Arg: &Partial{
+		Exp: Expression{"0": BUILTIN, "l": "fixed"},
+		Applied: []Value{builder},
+		Impl: func(s *State, args ...Value) { s.builtinFixed(args...) },
+	}, Env: s.copyEnv()})
+	s.SetValue(builder)
+}
+
+func (s *State) builtinFixed(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("fixed expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	builder := args[0]
+	arg := args[1]
+	
+	s.Push(CallCont{Arg: arg, Env: s.copyEnv()})
+	s.Push(CallCont{Arg: &Partial{
+		Exp: Expression{"0": BUILTIN, "l": "fixed"},
+		Applied: []Value{builder},
+		Impl: func(s *State, args ...Value) { s.builtinFixed(args...) },
+	}, Env: s.copyEnv()})
+	s.SetValue(builder)
+}
+
+func (s *State) builtinIntCompare(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("int_compare expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(float64)
+	b, okB := args[1].(float64)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("int_compare expects integer arguments")
+		return
+	}
+	
+	var result *Tagged
+	if a < b {
+		result = &Tagged{Tag: "Lt", Value: make(map[string]Value)}
+	} else if a > b {
+		result = &Tagged{Tag: "Gt", Value: make(map[string]Value)}
+	} else {
+		result = &Tagged{Tag: "Eq", Value: make(map[string]Value)}
+	}
+	
+	s.SetValue(result)
+}
+
+func (s *State) builtinIntAdd(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("int_add expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(float64)
+	b, okB := args[1].(float64)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("int_add expects integer arguments")
+		return
+	}
+	
+	s.SetValue(a + b)
+}
+
+func (s *State) builtinIntSubtract(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("int_subtract expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(float64)
+	b, okB := args[1].(float64)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("int_subtract expects integer arguments")
+		return
+	}
+	
+	s.SetValue(a - b)
+}
+
+func (s *State) builtinIntMultiply(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("int_multiply expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(float64)
+	b, okB := args[1].(float64)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("int_multiply expects integer arguments")
+		return
+	}
+	
+	s.SetValue(a * b)
+}
+
+func (s *State) builtinIntDivide(args ...Value) {
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("int_divide expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	a, okA := args[0].(float64)
+	b, okB := args[1].(float64)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("int_divide expects integer arguments")
+		return
+	}
+	
+	if b == 0 {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+	} else {
+		result := float64(int(a) / int(b)) // Integer division
+		s.SetValue(&Tagged{Tag: "Ok", Value: result})
+	}
+}
+
+func (s *State) builtinIntAbsolute(args ...Value) {
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("int_absolute expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	a, ok := args[0].(float64)
+	if !ok {
+		s.Break = fmt.Errorf("int_absolute expects integer argument")
+		return
+	}
+	
+	if a < 0 {
+		s.SetValue(-a)
+	} else {
+		s.SetValue(a)
+	}
+}
+
+func (s *State) builtinIntParse(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("int_parse not implemented")
+}
+
+func (s *State) builtinIntToString(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("int_to_string not implemented")
+}
+
+func (s *State) builtinStringAppend(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_append not implemented")
+}
+
+func (s *State) builtinStringSplit(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_split not implemented")
+}
+
+func (s *State) builtinStringSplitOnce(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_split_once not implemented")
+}
+
+func (s *State) builtinStringReplace(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_replace not implemented")
+}
+
+func (s *State) builtinStringUppercase(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_uppercase not implemented")
+}
+
+func (s *State) builtinStringLowercase(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_lowercase not implemented")
+}
+
+func (s *State) builtinStringEndsWith(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_ends_with not implemented")
+}
+
+func (s *State) builtinStringStartsWith(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_starts_with not implemented")
+}
+
+func (s *State) builtinStringLength(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("string_length not implemented")
+}
+
+func (s *State) builtinListPop(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("list_pop not implemented")
+}
+
+func (s *State) builtinListFold(args ...Value) {
+	// Stub implementation
+	s.Break = fmt.Errorf("list_fold not implemented")
+}
+
+// Helper function for value equality
+func (s *State) valuesEqual(a, b Value) bool {
+	// Handle Tagged values specially
+	if taggedA, okA := a.(*Tagged); okA {
+		if taggedB, okB := b.(*Tagged); okB {
+			return taggedA.Tag == taggedB.Tag && s.valuesEqual(taggedA.Value, taggedB.Value)
+		}
+		return false
+	}
+	
+	// Handle slices (lists)
+	if sliceA, okA := a.([]Value); okA {
+		if sliceB, okB := b.([]Value); okB {
+			if len(sliceA) != len(sliceB) {
+				return false
+			}
+			for i := range sliceA {
+				if !s.valuesEqual(sliceA[i], sliceB[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	
+	// Handle maps (records)
+	if mapA, okA := a.(map[string]Value); okA {
+		if mapB, okB := b.(map[string]Value); okB {
+			if len(mapA) != len(mapB) {
+				return false
+			}
+			for k, v := range mapA {
+				if vB, exists := mapB[k]; !exists || !s.valuesEqual(v, vB) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	
+	// For other types, use direct comparison
+	return a == b
 }
