@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"sort"
@@ -23,9 +24,16 @@ func main() {
 		return
 	}
 
+	// Special case for "ir" command with "--in" option
+	if command == "ir" && len(os.Args) >= 3 && os.Args[2] == "--in" {
+		handleIR("--in")
+		return
+	}
+
 	// For other commands, require a filename
 	if len(os.Args) < 3 {
 		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> <filename>")
+		fmt.Fprintln(os.Stderr, "       ./your_program.sh ir --in  # Read from stdin")
 		os.Exit(1)
 	}
 
@@ -36,6 +44,8 @@ func main() {
 		handleTokenize(filename)
 	case "parse":
 		handleParse(filename)
+	case "ir":
+		handleIR(filename)
 	case "evaluate":
 		handleEvaluate(filename, true)
 	case "run":
@@ -195,6 +205,55 @@ func formatValue(value Value) string {
 	default:
 		return fmt.Sprintf("%v", value)
 	}
+}
+
+func handleIR(filename string) {
+	var tokens []Token
+	var tokenizeErr error
+
+	// Check if we should read from stdin
+	if filename == "--in" {
+		// Read from stdin
+		var input string
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input += scanner.Text() + "\n"
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading from stdin: %v\n", err)
+			os.Exit(65)
+		}
+		
+		// Tokenize the input string
+		tokens, tokenizeErr = TokenizeString(input)
+	} else {
+		// Tokenize the file
+		tokens, tokenizeErr = TokenizeFile(filename)
+	}
+
+	if tokenizeErr != nil {
+		fmt.Fprintf(os.Stderr, "Tokenization error: %v\n", tokenizeErr)
+		os.Exit(65)
+	}
+
+	// Parse the tokens into an AST
+	parser := NewParser(tokens)
+	expr, parseErr := parser.Parse()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Parse error: %v\n", parseErr)
+		os.Exit(65)
+	}
+
+	// Convert the AST to IR format
+	converter := NewIRConverter()
+	irJson, err := converter.Convert(expr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "IR conversion error: %v\n", err)
+		os.Exit(65)
+	}
+
+	// Print the IR JSON
+	fmt.Println(string(irJson))
 }
 
 func handleRepl() {
