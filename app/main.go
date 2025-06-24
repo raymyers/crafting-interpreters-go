@@ -13,6 +13,15 @@ import (
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> [filename]")
+		fmt.Fprintln(os.Stderr, "Commands:")
+		fmt.Fprintln(os.Stderr, "  tokenize <filename>  - Tokenize a file")
+		fmt.Fprintln(os.Stderr, "  parse <filename>     - Parse a file to AST")
+		fmt.Fprintln(os.Stderr, "  ir <filename>        - Convert a file to IR JSON")
+		fmt.Fprintln(os.Stderr, "  ir --in              - Convert stdin input to IR JSON")
+		fmt.Fprintln(os.Stderr, "  evaluate <filename>  - Evaluate a file and print result")
+		fmt.Fprintln(os.Stderr, "  run <filename>       - Run a file without printing result")
+		fmt.Fprintln(os.Stderr, "  repl                 - Start interactive REPL")
+		fmt.Fprintln(os.Stderr, "  suite [filter]       - Run test suite with optional filter")
 		os.Exit(1)
 	}
 
@@ -31,9 +40,10 @@ func main() {
 	}
 
 	// For other commands, require a filename
-	if len(os.Args) < 3 {
+	if len(os.Args) < 3 && command != "suite" {
 		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> <filename>")
 		fmt.Fprintln(os.Stderr, "       ./your_program.sh ir --in  # Read from stdin")
+		fmt.Fprintln(os.Stderr, "       ./your_program.sh suite [filter]  # Run test suite")
 		os.Exit(1)
 	}
 
@@ -50,6 +60,16 @@ func main() {
 		handleEvaluate(filename, true)
 	case "run":
 		handleEvaluate(filename, false)
+	case "suite":
+		// For suite command, the filename is optional and used as a filter
+		filter := ""
+		if len(os.Args) >= 3 {
+			filter = os.Args[2]
+		}
+		if err := RunSuite(filter); err != nil {
+			fmt.Fprintf(os.Stderr, "Error running test suite: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
 		os.Exit(1)
