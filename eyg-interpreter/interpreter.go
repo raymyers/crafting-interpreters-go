@@ -429,44 +429,7 @@ func (s *State) call(fn Value, arg Value) {
 func (s *State) Loop() Value {
 	for {
 		s.Step()
-		
-		// Check if we have an effect that needs to be handled
-		if effect, ok := s.Break.(*Effect); ok {
-			// Look for a matching handler in the stack
-			reversed := make(Stack, 0)
-			newStack := make(Stack, 0)
-			found := false
-			
-			// Search from top of stack
-			for i := len(s.Stack) - 1; i >= 0; i-- {
-				kont := s.Stack[i]
-				
-				if delimit, ok := kont.(DelimitCont); ok && delimit.Label == effect.Label {
-					// Found matching handler
-					found = true
-					s.Break = nil
-					
-					// newStack contains everything below and including the handler
-					for j := 0; j <= i; j++ {
-						newStack = append(newStack, s.Stack[j])
-					}
-					
-					// Set up to call the handler
-					s.Stack = newStack
-					s.Push(CallCont{Arg: &Resume{Reversed: reversed}, Env: s.copyEnv()})
-					s.call(delimit.Handle, effect.Lift)
-					break
-				} else {
-					// Add to reversed stack (will be restored on resume)
-					reversed = append(reversed, kont)
-				}
-			}
-			
-			if !found {
-				// No handler found, return the effect to caller
-				return s.Control
-			}
-		} else if s.Break != nil || (s.IsValue && len(s.Stack) == 0) {
+		if s.Break != nil || (s.IsValue && len(s.Stack) == 0) {
 			return s.Control
 		}
 	}
@@ -671,7 +634,33 @@ func (s *State) perform(label string) func(*State, ...Value) {
 			return
 		}
 		lift := args[0]
-		s.Break = &Effect{Label: label, Lift: lift}
+		
+		// Search for handler in stack (like JavaScript reference)
+		stack := s.Stack
+		reversed := make(Stack, 0)
+		found := false
+		var foundHandler DelimitCont
+		
+		// Search from top of stack
+		for i := len(stack) - 1; i >= 0; i-- {
+			kont := stack[i]
+			reversed = append(reversed, kont)
+			
+			if delimit, ok := kont.(DelimitCont); ok && delimit.Label == label {
+				foundHandler = delimit
+				found = true
+				// Set stack to everything below the handler (excluding the handler)
+				s.Stack = stack[:i]
+				break
+			}
+		}
+		
+		if found {
+			s.Push(CallCont{Arg: &Resume{Reversed: reversed}, Env: s.copyEnv()})
+			s.call(foundHandler.Handle, lift)
+		} else {
+			s.Break = &Effect{Label: label, Lift: lift}
+		}
 	}
 }
 
