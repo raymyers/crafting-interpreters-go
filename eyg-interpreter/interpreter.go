@@ -375,26 +375,9 @@ func (s *State) apply() {
 		s.call(value, c.Arg)
 
 	case DelimitCont:
-		// Handle delimit continuation - this catches effects
-		if effect, ok := s.Break.(*Effect); ok && effect.Label == c.Label {
-			// Found matching handler for this effect
-			s.Break = nil
-			
-			// Create a resume continuation
-			reversed := make(Stack, len(s.Stack))
-			copy(reversed, s.Stack)
-			resume := &Resume{Reversed: reversed}
-			
-			// Clear the stack up to this handler
-			s.Stack = s.Stack[:0]
-			
-			// Apply handler to the lifted value and resume continuation
-			s.Push(CallCont{Arg: resume, Env: s.copyEnv()})
-			s.call(c.Handle, effect.Lift)
-		} else {
-			// No matching handler, continue with value
-			s.SetValue(value)
-		}
+		// Delimit continuations are just markers, they don't do anything when popped
+		// Effect handling is done in the Loop function
+		break
 
 	default:
 		s.Break = fmt.Errorf("invalid continuation type: %T", cont)
@@ -450,17 +433,36 @@ func (s *State) Loop() Value {
 		// Check if we have an effect that needs to be handled
 		if effect, ok := s.Break.(*Effect); ok {
 			// Look for a matching handler in the stack
-			handlerFound := false
+			reversed := make(Stack, 0)
+			newStack := make(Stack, 0)
+			found := false
+			
+			// Search from top of stack
 			for i := len(s.Stack) - 1; i >= 0; i-- {
-				if delimit, ok := s.Stack[i].(DelimitCont); ok && delimit.Label == effect.Label {
-					handlerFound = true
-					// We found a handler, need to unwind to it
-					// The apply function will handle this when we reach the DelimitCont
-					s.SetValue(nil) // Set a dummy value to trigger apply
+				kont := s.Stack[i]
+				
+				if delimit, ok := kont.(DelimitCont); ok && delimit.Label == effect.Label {
+					// Found matching handler
+					found = true
+					s.Break = nil
+					
+					// newStack contains everything below and including the handler
+					for j := 0; j <= i; j++ {
+						newStack = append(newStack, s.Stack[j])
+					}
+					
+					// Set up to call the handler
+					s.Stack = newStack
+					s.Push(CallCont{Arg: &Resume{Reversed: reversed}, Env: s.copyEnv()})
+					s.call(delimit.Handle, effect.Lift)
 					break
+				} else {
+					// Add to reversed stack (will be restored on resume)
+					reversed = append(reversed, kont)
 				}
 			}
-			if !handlerFound {
+			
+			if !found {
 				// No handler found, return the effect to caller
 				return s.Control
 			}
