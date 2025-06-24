@@ -2,14 +2,15 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
 
-func TestIRConverter(t *testing.T) {
+// TestIRConverterWithFixture tests the IR converter with all examples from the fixture
+func TestIRConverterWithFixture(t *testing.T) {
 	// Load the IR fixture
-	fixtureBytes, err := ioutil.ReadFile("ir-fixture.json")
+	fixtureBytes, err := os.ReadFile("ir-fixture.json")
 	if err != nil {
 		t.Fatalf("Failed to read IR fixture: %v", err)
 	}
@@ -20,58 +21,48 @@ func TestIRConverter(t *testing.T) {
 		t.Fatalf("Failed to parse IR fixture: %v", err)
 	}
 
-	// Test cases for different AST nodes
-	testCases := []struct {
-		name     string
-		input    string
-		expected IRNode
-	}{
-		{
-			name:     "Variable",
-			input:    "foo",
-			expected: fixtureNodes[0], // variable
-		},
-		{
-			name:     "Lambda",
-			input:    "|x| { x }",
-			expected: fixtureNodes[1], // function
-		},
-		{
-			name:     "Call",
-			input:    "(|x| { x })(\"foo\")",
-			expected: fixtureNodes[2], // apply
-		},
-		{
-			name:     "Let",
-			input:    "x = \"hi\"; x",
-			expected: fixtureNodes[3], // let
-		},
-		{
-			name:     "Integer",
-			input:    "5",
-			expected: fixtureNodes[5], // integer
-		},
-		{
-			name:     "String",
-			input:    "\"hello\"",
-			expected: fixtureNodes[6], // string
-		},
-		{
-			name:     "Empty List",
-			input:    "[]",
-			expected: fixtureNodes[7], // empty list
-		},
-		{
-			name:     "Empty Record",
-			input:    "{}",
-			expected: fixtureNodes[10], // empty record
-		},
+	// Map of testable examples from the fixture
+	// Some examples may not be directly testable with our current parser
+	testableExamples := map[string]bool{
+		"variable":     true,
+		"function":     true,
+		"apply":        true,
+		"let":          true,
+		"integer":      true,
+		"string":       true,
+		"empty list":   true,
+		"empty record": true,
+		// The following are not directly testable with our current parser
+		"binary":         false,
+		"list cons":      false,
+		"vacant":         false,
+		"extend record":  false,
+		"select field":   false,
+		"tag":            false,
+		"match":          false,
+		"no match":       false,
+		"perform effect": false,
+		"handle effect":  false,
+		"add integer builtin": false,
+		"cid reference":  false,
+		"release":        false,
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	// Run tests for each fixture example that is testable
+	for _, fixtureNode := range fixtureNodes {
+		// Skip examples that are not directly testable
+		if !testableExamples[fixtureNode.Name] {
+			t.Logf("Skipping test for %q as it's not directly testable", fixtureNode.Name)
+			continue
+		}
+
+		t.Run(fixtureNode.Name, func(t *testing.T) {
+			// Use the code from the fixture as input
+			input := fixtureNode.Code
+			t.Logf("Testing with input: %s", input)
+
 			// Parse the input
-			tokens, err := TokenizeString(tc.input)
+			tokens, err := TokenizeString(input)
 			if err != nil {
 				t.Fatalf("Failed to tokenize input: %v", err)
 			}
@@ -102,26 +93,44 @@ func TestIRConverter(t *testing.T) {
 			}
 
 			// Compare the first node with the expected node
-			// Note: This is a simplified comparison that only checks the name
-			// A more thorough test would compare the entire structure
-			if irNodes[0].Name != tc.expected.Name {
-				t.Errorf("Expected node name %q, got %q", tc.expected.Name, irNodes[0].Name)
+			if irNodes[0].Name != fixtureNode.Name {
+				t.Errorf("Expected node name %q, got %q", fixtureNode.Name, irNodes[0].Name)
 			}
+
+			// For a more thorough test, we could compare the entire structure
+			// This would require a deep comparison of the source field
+			// For now, we'll just check that the name matches
+			t.Logf("Successfully converted %q to IR", fixtureNode.Name)
 		})
 	}
 }
 
-// TestIRCommandWithFixture tests the IR command with examples from the fixture
-func TestIRCommandWithFixture(t *testing.T) {
+// TestIRCommandWithStdin tests the IR command with stdin input
+func TestIRCommandWithStdin(t *testing.T) {
+	// Load the IR fixture to get test cases
+	fixtureBytes, err := os.ReadFile("ir-fixture.json")
+	if err != nil {
+		t.Fatalf("Failed to read IR fixture: %v", err)
+	}
+
+	var fixtureNodes []IRNode
+	err = json.Unmarshal(fixtureBytes, &fixtureNodes)
+	if err != nil {
+		t.Fatalf("Failed to parse IR fixture: %v", err)
+	}
+
+	// Test with a variable expression from the fixture
+	testNode := fixtureNodes[0] // variable "foo"
+	
 	// Create a temporary file for testing
-	tmpfile, err := ioutil.TempFile("", "test-*.lox")
+	tmpfile, err := os.CreateTemp("", "test-*.eyg")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tmpfile.Name())
 
-	// Test with a variable expression
-	_, err = tmpfile.WriteString("foo")
+	// Write the test code to the file
+	_, err = tmpfile.WriteString(testNode.Code)
 	if err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
@@ -140,7 +149,7 @@ func TestIRCommandWithFixture(t *testing.T) {
 	os.Stdout = oldStdout
 
 	// Read the captured output
-	outputBytes, _ := ioutil.ReadAll(r)
+	outputBytes, _ := io.ReadAll(r)
 	output := string(outputBytes)
 
 	// Check if the output contains expected IR structure
@@ -161,7 +170,7 @@ func TestIRCommandWithFixture(t *testing.T) {
 	}
 
 	// Check if the first node has the expected name
-	if irNodes[0].Name != "variable" {
-		t.Errorf("Expected node name 'variable', got %q", irNodes[0].Name)
+	if irNodes[0].Name != testNode.Name {
+		t.Errorf("Expected node name %q, got %q", testNode.Name, irNodes[0].Name)
 	}
 }
