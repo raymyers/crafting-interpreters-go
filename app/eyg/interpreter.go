@@ -1,35 +1,35 @@
-package main
+package eyg
 
 import (
 	"encoding/base64"
 	"fmt"
+	"golang.org/x/text/unicode/norm"
 	"strings"
 	"unicode/utf8"
-	"golang.org/x/text/unicode/norm"
 )
 
 // Expression type constants
 const (
-	VAR     = "v"
-	LAMBDA  = "f"
-	APPLY   = "a"
-	LET     = "l"
-	VACANT  = "z"
-	BINARY  = "x"
-	INT     = "i"
-	STRING  = "s"
-	TAIL    = "ta"
-	CONS    = "c"
-	EMPTY   = "u"
-	EXTEND  = "e"
-	SELECT  = "g"
+	VAR       = "v"
+	LAMBDA    = "f"
+	APPLY     = "a"
+	LET       = "l"
+	VACANT    = "z"
+	BINARY    = "x"
+	INT       = "i"
+	STRING    = "s"
+	TAIL      = "ta"
+	CONS      = "c"
+	EMPTY     = "u"
+	EXTEND    = "e"
+	SELECT    = "g"
 	OVERWRITE = "o"
-	TAG     = "t"
-	CASE    = "m"
-	NOCASES = "n"
-	PERFORM = "p"
-	HANDLE  = "h"
-	BUILTIN = "b"
+	TAG       = "t"
+	CASE      = "m"
+	NOCASES   = "n"
+	PERFORM   = "p"
+	HANDLE    = "h"
+	BUILTIN   = "b"
 )
 
 // Value represents any value in the EYG language
@@ -469,7 +469,7 @@ func (s *State) getRequiredArgs(expr Expression) int {
 	if !ok {
 		return 1
 	}
-	
+
 	switch exprType {
 	case CONS, EXTEND, OVERWRITE:
 		return 2
@@ -493,34 +493,34 @@ func (s *State) getRequiredArgs(expr Expression) int {
 // getBuiltinArgCount returns the number of arguments required for a builtin
 func (s *State) getBuiltinArgCount(name string) int {
 	argCounts := map[string]int{
-		"equal":        2,
-		"fix":          1,
-		"fixed":        2,
-		"int_compare":  2,
-		"int_add":      2,
-		"int_subtract": 2,
-		"int_multiply": 2,
-		"int_divide":   2,
-		"int_absolute": 1,
-		"int_parse":    1,
-		"int_to_string": 1,
-		"string_append": 2,
-		"string_split": 2,
-		"string_split_once": 2,
-		"string_replace": 3,
-		"string_uppercase": 1,
-		"string_lowercase": 1,
-		"string_ends_with": 2,
-		"string_starts_with": 2,
-		"string_length": 1,
-		"list_pop": 1,
-		"list_fold": 3,
-		"string_to_binary": 1,
-		"string_from_binary": 1,
+		"equal":                2,
+		"fix":                  1,
+		"fixed":                2,
+		"int_compare":          2,
+		"int_add":              2,
+		"int_subtract":         2,
+		"int_multiply":         2,
+		"int_divide":           2,
+		"int_absolute":         1,
+		"int_parse":            1,
+		"int_to_string":        1,
+		"string_append":        2,
+		"string_split":         2,
+		"string_split_once":    2,
+		"string_replace":       3,
+		"string_uppercase":     1,
+		"string_lowercase":     1,
+		"string_ends_with":     2,
+		"string_starts_with":   2,
+		"string_length":        1,
+		"list_pop":             1,
+		"list_fold":            3,
+		"string_to_binary":     1,
+		"string_from_binary":   1,
 		"binary_from_integers": 1,
-		"binary_fold": 3,
+		"binary_fold":          3,
 	}
-	
+
 	if count, exists := argCounts[name]; exists {
 		return count
 	}
@@ -610,7 +610,7 @@ func (s *State) caseMatch(label string) func(*State, ...Value) {
 		branch := args[0]
 		otherwise := args[1]
 		value := args[2]
-		
+
 		if tagged, ok := value.(*Tagged); ok {
 			if tagged.Tag == label {
 				s.call(branch, tagged.Value)
@@ -634,18 +634,18 @@ func (s *State) perform(label string) func(*State, ...Value) {
 			return
 		}
 		lift := args[0]
-		
+
 		// Search for handler in stack (like JavaScript reference)
 		stack := s.Stack
 		reversed := make(Stack, 0)
 		found := false
 		var foundHandler DelimitCont
-		
+
 		// Search from top of stack
 		for i := len(stack) - 1; i >= 0; i-- {
 			kont := stack[i]
 			reversed = append(reversed, kont)
-			
+
 			if delimit, ok := kont.(DelimitCont); ok && delimit.Label == label {
 				foundHandler = delimit
 				found = true
@@ -654,7 +654,7 @@ func (s *State) perform(label string) func(*State, ...Value) {
 				break
 			}
 		}
-		
+
 		if found {
 			s.Push(CallCont{Arg: &Resume{Reversed: reversed}, Env: s.copyEnv()})
 			s.call(foundHandler.Handle, lift)
@@ -679,34 +679,34 @@ func (s *State) handle(label string) func(*State, ...Value) {
 
 func (s *State) getBuiltin(name string) func(*State, ...Value) {
 	builtins := map[string]func(*State, ...Value){
-		"equal":        func(s *State, args ...Value) { s.builtinEqual(args...) },
-		"fix":          func(s *State, args ...Value) { s.builtinFix(args...) },
-		"fixed":        func(s *State, args ...Value) { s.builtinFixed(args...) },
-		"int_compare":  func(s *State, args ...Value) { s.builtinIntCompare(args...) },
-		"int_add":      func(s *State, args ...Value) { s.builtinIntAdd(args...) },
-		"int_subtract": func(s *State, args ...Value) { s.builtinIntSubtract(args...) },
-		"int_multiply": func(s *State, args ...Value) { s.builtinIntMultiply(args...) },
-		"int_divide":   func(s *State, args ...Value) { s.builtinIntDivide(args...) },
-		"int_absolute": func(s *State, args ...Value) { s.builtinIntAbsolute(args...) },
-		"int_parse":    func(s *State, args ...Value) { s.builtinIntParse(args...) },
-		"int_to_string": func(s *State, args ...Value) { s.builtinIntToString(args...) },
-		"string_append": func(s *State, args ...Value) { s.builtinStringAppend(args...) },
-		"string_split": func(s *State, args ...Value) { s.builtinStringSplit(args...) },
-		"string_split_once": func(s *State, args ...Value) { s.builtinStringSplitOnce(args...) },
-		"string_replace": func(s *State, args ...Value) { s.builtinStringReplace(args...) },
-		"string_uppercase": func(s *State, args ...Value) { s.builtinStringUppercase(args...) },
-		"string_lowercase": func(s *State, args ...Value) { s.builtinStringLowercase(args...) },
-		"string_ends_with": func(s *State, args ...Value) { s.builtinStringEndsWith(args...) },
-		"string_starts_with": func(s *State, args ...Value) { s.builtinStringStartsWith(args...) },
-		"string_length": func(s *State, args ...Value) { s.builtinStringLength(args...) },
-		"list_pop": func(s *State, args ...Value) { s.builtinListPop(args...) },
-		"list_fold": func(s *State, args ...Value) { s.builtinListFold(args...) },
-		"string_to_binary": func(s *State, args ...Value) { s.builtinStringToBinary(args...) },
-		"string_from_binary": func(s *State, args ...Value) { s.builtinStringFromBinary(args...) },
+		"equal":                func(s *State, args ...Value) { s.builtinEqual(args...) },
+		"fix":                  func(s *State, args ...Value) { s.builtinFix(args...) },
+		"fixed":                func(s *State, args ...Value) { s.builtinFixed(args...) },
+		"int_compare":          func(s *State, args ...Value) { s.builtinIntCompare(args...) },
+		"int_add":              func(s *State, args ...Value) { s.builtinIntAdd(args...) },
+		"int_subtract":         func(s *State, args ...Value) { s.builtinIntSubtract(args...) },
+		"int_multiply":         func(s *State, args ...Value) { s.builtinIntMultiply(args...) },
+		"int_divide":           func(s *State, args ...Value) { s.builtinIntDivide(args...) },
+		"int_absolute":         func(s *State, args ...Value) { s.builtinIntAbsolute(args...) },
+		"int_parse":            func(s *State, args ...Value) { s.builtinIntParse(args...) },
+		"int_to_string":        func(s *State, args ...Value) { s.builtinIntToString(args...) },
+		"string_append":        func(s *State, args ...Value) { s.builtinStringAppend(args...) },
+		"string_split":         func(s *State, args ...Value) { s.builtinStringSplit(args...) },
+		"string_split_once":    func(s *State, args ...Value) { s.builtinStringSplitOnce(args...) },
+		"string_replace":       func(s *State, args ...Value) { s.builtinStringReplace(args...) },
+		"string_uppercase":     func(s *State, args ...Value) { s.builtinStringUppercase(args...) },
+		"string_lowercase":     func(s *State, args ...Value) { s.builtinStringLowercase(args...) },
+		"string_ends_with":     func(s *State, args ...Value) { s.builtinStringEndsWith(args...) },
+		"string_starts_with":   func(s *State, args ...Value) { s.builtinStringStartsWith(args...) },
+		"string_length":        func(s *State, args ...Value) { s.builtinStringLength(args...) },
+		"list_pop":             func(s *State, args ...Value) { s.builtinListPop(args...) },
+		"list_fold":            func(s *State, args ...Value) { s.builtinListFold(args...) },
+		"string_to_binary":     func(s *State, args ...Value) { s.builtinStringToBinary(args...) },
+		"string_from_binary":   func(s *State, args ...Value) { s.builtinStringFromBinary(args...) },
 		"binary_from_integers": func(s *State, args ...Value) { s.builtinBinaryFromIntegers(args...) },
-		"binary_fold": func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
+		"binary_fold":          func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
 	}
-	
+
 	return builtins[name]
 }
 
@@ -723,10 +723,10 @@ func (s *State) builtinEqual(args ...Value) {
 		s.Break = fmt.Errorf("equal expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, b := args[0], args[1]
 	isEqual := s.valuesEqual(a, b)
-	
+
 	if isEqual {
 		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
 	} else {
@@ -739,14 +739,14 @@ func (s *State) builtinFix(args ...Value) {
 		s.Break = fmt.Errorf("fix expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	builder := args[0]
 	// Create a fixed point combinator
 	// This is a simplified implementation
 	s.Push(CallCont{Arg: &Partial{
-		Exp: Expression{"0": BUILTIN, "l": "fixed"},
+		Exp:     Expression{"0": BUILTIN, "l": "fixed"},
 		Applied: []Value{builder},
-		Impl: func(s *State, args ...Value) { s.builtinFixed(args...) },
+		Impl:    func(s *State, args ...Value) { s.builtinFixed(args...) },
 	}, Env: s.copyEnv()})
 	s.SetValue(builder)
 }
@@ -756,15 +756,15 @@ func (s *State) builtinFixed(args ...Value) {
 		s.Break = fmt.Errorf("fixed expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	builder := args[0]
 	arg := args[1]
-	
+
 	s.Push(CallCont{Arg: arg, Env: s.copyEnv()})
 	s.Push(CallCont{Arg: &Partial{
-		Exp: Expression{"0": BUILTIN, "l": "fixed"},
+		Exp:     Expression{"0": BUILTIN, "l": "fixed"},
 		Applied: []Value{builder},
-		Impl: func(s *State, args ...Value) { s.builtinFixed(args...) },
+		Impl:    func(s *State, args ...Value) { s.builtinFixed(args...) },
 	}, Env: s.copyEnv()})
 	s.SetValue(builder)
 }
@@ -774,14 +774,14 @@ func (s *State) builtinIntCompare(args ...Value) {
 		s.Break = fmt.Errorf("int_compare expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(float64)
 	b, okB := args[1].(float64)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("int_compare expects integer arguments")
 		return
 	}
-	
+
 	var result *Tagged
 	if a < b {
 		result = &Tagged{Tag: "Lt", Value: make(map[string]Value)}
@@ -790,7 +790,7 @@ func (s *State) builtinIntCompare(args ...Value) {
 	} else {
 		result = &Tagged{Tag: "Eq", Value: make(map[string]Value)}
 	}
-	
+
 	s.SetValue(result)
 }
 
@@ -799,14 +799,14 @@ func (s *State) builtinIntAdd(args ...Value) {
 		s.Break = fmt.Errorf("int_add expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(float64)
 	b, okB := args[1].(float64)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("int_add expects integer arguments")
 		return
 	}
-	
+
 	s.SetValue(a + b)
 }
 
@@ -815,14 +815,14 @@ func (s *State) builtinIntSubtract(args ...Value) {
 		s.Break = fmt.Errorf("int_subtract expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(float64)
 	b, okB := args[1].(float64)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("int_subtract expects integer arguments")
 		return
 	}
-	
+
 	s.SetValue(a - b)
 }
 
@@ -831,14 +831,14 @@ func (s *State) builtinIntMultiply(args ...Value) {
 		s.Break = fmt.Errorf("int_multiply expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(float64)
 	b, okB := args[1].(float64)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("int_multiply expects integer arguments")
 		return
 	}
-	
+
 	s.SetValue(a * b)
 }
 
@@ -847,14 +847,14 @@ func (s *State) builtinIntDivide(args ...Value) {
 		s.Break = fmt.Errorf("int_divide expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(float64)
 	b, okB := args[1].(float64)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("int_divide expects integer arguments")
 		return
 	}
-	
+
 	if b == 0 {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 	} else {
@@ -868,13 +868,13 @@ func (s *State) builtinIntAbsolute(args ...Value) {
 		s.Break = fmt.Errorf("int_absolute expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	a, ok := args[0].(float64)
 	if !ok {
 		s.Break = fmt.Errorf("int_absolute expects integer argument")
 		return
 	}
-	
+
 	if a < 0 {
 		s.SetValue(-a)
 	} else {
@@ -887,33 +887,33 @@ func (s *State) builtinIntParse(args ...Value) {
 		s.Break = fmt.Errorf("int_parse expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	str, ok := args[0].(string)
 	if !ok {
 		s.Break = fmt.Errorf("int_parse expects string argument")
 		return
 	}
-	
+
 	// Try to parse as integer
 	var n float64
 	if _, err := fmt.Sscanf(str, "%f", &n); err != nil {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	// Check if it's actually an integer (no decimal part)
 	if n != float64(int(n)) {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	// Check if the string representation matches exactly (no extra characters)
 	expected := fmt.Sprintf("%.0f", n)
 	if str != expected {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	s.SetValue(&Tagged{Tag: "Ok", Value: n})
 }
 
@@ -922,13 +922,13 @@ func (s *State) builtinIntToString(args ...Value) {
 		s.Break = fmt.Errorf("int_to_string expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	a, ok := args[0].(float64)
 	if !ok {
 		s.Break = fmt.Errorf("int_to_string expects integer argument")
 		return
 	}
-	
+
 	result := fmt.Sprintf("%.0f", a)
 	s.SetValue(result)
 }
@@ -938,14 +938,14 @@ func (s *State) builtinStringAppend(args ...Value) {
 		s.Break = fmt.Errorf("string_append expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	a, okA := args[0].(string)
 	b, okB := args[1].(string)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("string_append expects string arguments")
 		return
 	}
-	
+
 	s.SetValue(a + b)
 }
 
@@ -954,16 +954,16 @@ func (s *State) builtinStringSplit(args ...Value) {
 		s.Break = fmt.Errorf("string_split expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	str, okA := args[0].(string)
 	sep, okB := args[1].(string)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("string_split expects string arguments")
 		return
 	}
-	
+
 	result := make(map[string]Value)
-	
+
 	if sep == "" {
 		// Special case: splitting on empty string means split into characters
 		if str == "" {
@@ -981,7 +981,7 @@ func (s *State) builtinStringSplit(args ...Value) {
 	} else {
 		// Find the first occurrence of separator
 		index := strings.Index(str, sep)
-		
+
 		if index == -1 {
 			// Separator not found, entire string is head, empty tail
 			result["head"] = str
@@ -990,9 +990,9 @@ func (s *State) builtinStringSplit(args ...Value) {
 			// Split at first occurrence
 			head := str[:index]
 			remainder := str[index+len(sep):]
-			
+
 			result["head"] = head
-			
+
 			// Split the remainder by separator for tail
 			if remainder == "" {
 				// If remainder is empty, tail should contain one empty string
@@ -1007,7 +1007,7 @@ func (s *State) builtinStringSplit(args ...Value) {
 			}
 		}
 	}
-	
+
 	s.SetValue(result)
 }
 
@@ -1016,14 +1016,14 @@ func (s *State) builtinStringSplitOnce(args ...Value) {
 		s.Break = fmt.Errorf("string_split_once expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	str, okA := args[0].(string)
 	sep, okB := args[1].(string)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("string_split_once expects string arguments")
 		return
 	}
-	
+
 	idx := strings.Index(str, sep)
 	if idx == -1 {
 		// No split occurred - return Error
@@ -1032,11 +1032,11 @@ func (s *State) builtinStringSplitOnce(args ...Value) {
 		// Split at first occurrence - return Ok with record
 		before := str[:idx]
 		after := str[idx+len(sep):]
-		
+
 		record := make(map[string]Value)
 		record["pre"] = before
 		record["post"] = after
-		
+
 		s.SetValue(&Tagged{Tag: "Ok", Value: record})
 	}
 }
@@ -1046,7 +1046,7 @@ func (s *State) builtinStringReplace(args ...Value) {
 		s.Break = fmt.Errorf("string_replace expects 3 arguments, got %d", len(args))
 		return
 	}
-	
+
 	str, okA := args[0].(string)
 	old, okB := args[1].(string)
 	new, okC := args[2].(string)
@@ -1054,7 +1054,7 @@ func (s *State) builtinStringReplace(args ...Value) {
 		s.Break = fmt.Errorf("string_replace expects string arguments")
 		return
 	}
-	
+
 	result := strings.ReplaceAll(str, old, new)
 	s.SetValue(result)
 }
@@ -1064,13 +1064,13 @@ func (s *State) builtinStringUppercase(args ...Value) {
 		s.Break = fmt.Errorf("string_uppercase expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	str, ok := args[0].(string)
 	if !ok {
 		s.Break = fmt.Errorf("string_uppercase expects string argument")
 		return
 	}
-	
+
 	s.SetValue(strings.ToUpper(str))
 }
 
@@ -1079,13 +1079,13 @@ func (s *State) builtinStringLowercase(args ...Value) {
 		s.Break = fmt.Errorf("string_lowercase expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	str, ok := args[0].(string)
 	if !ok {
 		s.Break = fmt.Errorf("string_lowercase expects string argument")
 		return
 	}
-	
+
 	s.SetValue(strings.ToLower(str))
 }
 
@@ -1094,14 +1094,14 @@ func (s *State) builtinStringEndsWith(args ...Value) {
 		s.Break = fmt.Errorf("string_ends_with expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	str, okA := args[0].(string)
 	suffix, okB := args[1].(string)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("string_ends_with expects string arguments")
 		return
 	}
-	
+
 	if strings.HasSuffix(str, suffix) {
 		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
 	} else {
@@ -1114,14 +1114,14 @@ func (s *State) builtinStringStartsWith(args ...Value) {
 		s.Break = fmt.Errorf("string_starts_with expects 2 arguments, got %d", len(args))
 		return
 	}
-	
+
 	str, okA := args[0].(string)
 	prefix, okB := args[1].(string)
 	if !okA || !okB {
 		s.Break = fmt.Errorf("string_starts_with expects string arguments")
 		return
 	}
-	
+
 	if strings.HasPrefix(str, prefix) {
 		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
 	} else {
@@ -1134,18 +1134,18 @@ func (s *State) builtinStringLength(args ...Value) {
 		s.Break = fmt.Errorf("string_length expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	a, ok := args[0].(string)
 	if !ok {
 		s.Break = fmt.Errorf("string_length expects string argument")
 		return
 	}
-	
+
 	// Count grapheme clusters instead of bytes/runes
 	// Normalize to NFC form and then count grapheme clusters
 	normalized := norm.NFC.String(a)
 	graphemeCount := 0
-	
+
 	// Simple grapheme cluster counting
 	// This is a basic implementation that works for the test case
 	for len(normalized) > 0 {
@@ -1155,7 +1155,7 @@ func (s *State) builtinStringLength(args ...Value) {
 		}
 		normalized = normalized[size:]
 		graphemeCount++
-		
+
 		// Skip combining marks
 		for len(normalized) > 0 {
 			r, size := utf8.DecodeRuneInString(normalized)
@@ -1170,7 +1170,7 @@ func (s *State) builtinStringLength(args ...Value) {
 			}
 		}
 	}
-	
+
 	s.SetValue(float64(graphemeCount))
 }
 
@@ -1179,13 +1179,13 @@ func (s *State) builtinListPop(args ...Value) {
 		s.Break = fmt.Errorf("list_pop expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	list, ok := args[0].([]Value)
 	if !ok {
 		s.Break = fmt.Errorf("list_pop expects list argument")
 		return
 	}
-	
+
 	if len(list) == 0 {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 	} else {
@@ -1203,32 +1203,32 @@ func (s *State) builtinListFold(args ...Value) {
 		s.Break = fmt.Errorf("list_fold expects 3 arguments, got %d", len(args))
 		return
 	}
-	
+
 	list, ok := args[0].([]Value)
 	if !ok {
 		s.Break = fmt.Errorf("list_fold expects list as first argument")
 		return
 	}
-	
+
 	state := args[1]
 	fn := args[2]
-	
+
 	if len(list) == 0 {
 		s.SetValue(state)
 		return
 	}
-	
+
 	// Recursive implementation: fold(tail, fn(elem, state), fn)
 	head := list[0]
 	tail := list[1:]
-	
+
 	// Set up the continuation stack for the recursive call
 	// We need to call fn(elem, acc) first, then use that result for the recursive fold
 	s.Push(CallCont{Arg: fn, Env: s.copyEnv()})
 	s.Push(ApplyCont{Func: &Partial{
-		Exp: Expression{"0": BUILTIN, "l": "list_fold"},
+		Exp:     Expression{"0": BUILTIN, "l": "list_fold"},
 		Applied: []Value{tail},
-		Impl: func(s *State, args ...Value) { s.builtinListFold(args...) },
+		Impl:    func(s *State, args ...Value) { s.builtinListFold(args...) },
 	}, Env: s.copyEnv()})
 	s.Push(CallCont{Arg: state, Env: s.copyEnv()})
 	s.call(fn, head)
@@ -1243,7 +1243,7 @@ func (s *State) valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// Handle slices (lists)
 	if sliceA, okA := a.([]Value); okA {
 		if sliceB, okB := b.([]Value); okB {
@@ -1259,7 +1259,7 @@ func (s *State) valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// Handle maps (records)
 	if mapA, okA := a.(map[string]Value); okA {
 		if mapB, okB := b.(map[string]Value); okB {
@@ -1275,7 +1275,7 @@ func (s *State) valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// For other types, use direct comparison
 	return a == b
 }
@@ -1286,26 +1286,26 @@ func (s *State) builtinStringToBinary(args ...Value) {
 		s.Break = fmt.Errorf("string_to_binary expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	str, ok := args[0].(string)
 	if !ok {
 		s.Break = fmt.Errorf("string_to_binary expects string argument")
 		return
 	}
-	
+
 	// Convert string to binary format expected by EYG
 	bytes := []byte(str)
 	encoded := base64.StdEncoding.EncodeToString(bytes)
 	// Remove padding as expected by EYG format
 	encoded = strings.TrimRight(encoded, "=")
-	
+
 	// Create the expected record structure: {"/": {"bytes": "base64data"}}
 	innerRecord := make(map[string]Value)
 	innerRecord["bytes"] = encoded
-	
+
 	outerRecord := make(map[string]Value)
 	outerRecord["/"] = innerRecord
-	
+
 	s.SetValue(outerRecord)
 }
 
@@ -1314,7 +1314,7 @@ func (s *State) builtinStringFromBinary(args ...Value) {
 		s.Break = fmt.Errorf("string_from_binary expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	// Expect binary format: {"/": {"bytes": "base64data"}}
 	outerRecord, ok := args[0].(map[string]Value)
 	if !ok {
@@ -1330,13 +1330,13 @@ func (s *State) builtinStringFromBinary(args ...Value) {
 			return
 		}
 	}
-	
+
 	innerValue, exists := outerRecord["/"]
 	if !exists {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	innerRecord, ok := innerValue.(map[string]Value)
 	if !ok {
 		// Try map[string]interface{} for test compatibility
@@ -1350,38 +1350,38 @@ func (s *State) builtinStringFromBinary(args ...Value) {
 			return
 		}
 	}
-	
+
 	bytesValue, exists := innerRecord["bytes"]
 	if !exists {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	encoded, ok := bytesValue.(string)
 	if !ok {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	// Add padding if needed for base64 decoding
 	for len(encoded)%4 != 0 {
 		encoded += "="
 	}
-	
+
 	// Decode base64 to bytes
 	bytes, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	// Check if bytes form valid UTF-8
 	result := string(bytes)
 	if !utf8.ValidString(result) {
 		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 		return
 	}
-	
+
 	s.SetValue(&Tagged{Tag: "Ok", Value: result})
 }
 
@@ -1390,13 +1390,13 @@ func (s *State) builtinBinaryFromIntegers(args ...Value) {
 		s.Break = fmt.Errorf("binary_from_integers expects 1 argument, got %d", len(args))
 		return
 	}
-	
+
 	list, ok := args[0].([]Value)
 	if !ok {
 		s.Break = fmt.Errorf("binary_from_integers expects list argument")
 		return
 	}
-	
+
 	// Convert list of integers to binary
 	bytes := make([]byte, len(list))
 	for i, v := range list {
@@ -1407,17 +1407,17 @@ func (s *State) builtinBinaryFromIntegers(args ...Value) {
 			return
 		}
 	}
-	
+
 	// Create the expected binary format
 	encoded := base64.StdEncoding.EncodeToString(bytes)
 	// Remove padding as expected by EYG format
 	encoded = strings.TrimRight(encoded, "=")
 	innerRecord := make(map[string]Value)
 	innerRecord["bytes"] = encoded
-	
+
 	outerRecord := make(map[string]Value)
 	outerRecord["/"] = innerRecord
-	
+
 	s.SetValue(outerRecord)
 }
 
@@ -1426,7 +1426,7 @@ func (s *State) builtinBinaryFold(args ...Value) {
 		s.Break = fmt.Errorf("binary_fold expects 3 arguments, got %d", len(args))
 		return
 	}
-	
+
 	// Extract binary data from the expected format
 	outerRecord, ok := args[0].(map[string]Value)
 	if !ok {
@@ -1441,13 +1441,13 @@ func (s *State) builtinBinaryFold(args ...Value) {
 			return
 		}
 	}
-	
+
 	innerValue, exists := outerRecord["/"]
 	if !exists {
 		s.Break = fmt.Errorf("binary_fold: invalid binary format")
 		return
 	}
-	
+
 	innerRecord, ok := innerValue.(map[string]Value)
 	if !ok {
 		// Try map[string]interface{} for test compatibility
@@ -1461,49 +1461,49 @@ func (s *State) builtinBinaryFold(args ...Value) {
 			return
 		}
 	}
-	
+
 	bytesValue, exists := innerRecord["bytes"]
 	if !exists {
 		s.Break = fmt.Errorf("binary_fold: invalid binary format")
 		return
 	}
-	
+
 	encoded, ok := bytesValue.(string)
 	if !ok {
 		s.Break = fmt.Errorf("binary_fold: invalid binary format")
 		return
 	}
-	
+
 	// Add padding if needed for base64 decoding
 	for len(encoded)%4 != 0 {
 		encoded += "="
 	}
-	
+
 	// Decode base64 to bytes
 	bytes, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		s.Break = fmt.Errorf("binary_fold: invalid base64 data")
 		return
 	}
-	
+
 	state := args[1]
 	fn := args[2]
-	
+
 	if len(bytes) == 0 {
 		s.SetValue(state)
 		return
 	}
-	
+
 	// Convert bytes to Value array for processing
 	binary := make([]Value, len(bytes))
 	for i, b := range bytes {
 		binary[i] = float64(b)
 	}
-	
+
 	// Recursive implementation: fold(tail, fn(head, state), fn)
 	head := binary[0]
 	tail := binary[1:]
-	
+
 	// Create binary format for tail
 	tailBytes := make([]byte, len(tail))
 	for i, v := range tail {
@@ -1516,13 +1516,13 @@ func (s *State) builtinBinaryFold(args ...Value) {
 	tailInner["bytes"] = tailEncoded
 	tailOuter := make(map[string]Value)
 	tailOuter["/"] = tailInner
-	
+
 	// Set up the continuation stack for the recursive call
 	s.Push(CallCont{Arg: fn, Env: s.copyEnv()})
 	s.Push(ApplyCont{Func: &Partial{
-		Exp: Expression{"0": BUILTIN, "l": "binary_fold"},
+		Exp:     Expression{"0": BUILTIN, "l": "binary_fold"},
 		Applied: []Value{tailOuter},
-		Impl: func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
+		Impl:    func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
 	}, Env: s.copyEnv()})
 	s.Push(CallCont{Arg: state, Env: s.copyEnv()})
 	s.Push(CallCont{Arg: head, Env: s.copyEnv()})

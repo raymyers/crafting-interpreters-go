@@ -2,10 +2,9 @@
 
 # Variables
 BINARY_NAME=interpreter
-EYG_BINARY_NAME=eyg-interpreter
 BUILD_DIR=build
 APP_DIR=app
-EYG_DIR=eyg-interpreter
+EYG_DIR=app/eyg
 GO_FILES=$(wildcard $(APP_DIR)/*.go)
 EYG_GO_FILES=$(wildcard $(EYG_DIR)/*.go)
 
@@ -14,7 +13,7 @@ EYG_GO_FILES=$(wildcard $(EYG_DIR)/*.go)
 
 # Build all applications
 .PHONY: build-all
-build-all: build build-eyg
+build-all: build
 
 # Build the main Lox interpreter
 .PHONY: build
@@ -24,13 +23,6 @@ $(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES)
 	mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(APP_DIR)/*.go
 
-# Build the EYG interpreter
-.PHONY: build-eyg
-build-eyg: $(BUILD_DIR)/$(EYG_BINARY_NAME)
-
-$(BUILD_DIR)/$(EYG_BINARY_NAME): $(EYG_GO_FILES)
-	mkdir -p $(BUILD_DIR)
-	cd $(EYG_DIR) && go build -o ../$(BUILD_DIR)/$(EYG_BINARY_NAME) .
 
 # Create build directory
 $(BUILD_DIR):
@@ -38,27 +30,18 @@ $(BUILD_DIR):
 
 # Run all tests
 .PHONY: test-all
-test-all: test test-eyg
+test-all: test test
 
 # Run main interpreter tests
 .PHONY: test
 test:
-	go test ./$(APP_DIR)
+	go test ./$(APP_DIR) ./$(EYG_DIR)
 
-# Run EYG interpreter tests
-.PHONY: test-eyg
-test-eyg:
-	cd $(EYG_DIR) && go test
 
 # Run tests with coverage
 .PHONY: test-coverage
 test-coverage:
-	go test ./$(APP_DIR) -cover
-
-# Run EYG tests with coverage
-.PHONY: test-eyg-coverage
-test-eyg-coverage:
-	cd $(EYG_DIR) && go test -cover
+	go test ./$(APP_DIR) /$(EYG_DIR) -cover
 
 # Clean build artifacts
 .PHONY: clean
@@ -69,11 +52,6 @@ clean:
 .PHONY: run
 run: build
 	./$(BUILD_DIR)/$(BINARY_NAME) $(ARGS)
-
-# Run the EYG interpreter
-.PHONY: run-eyg
-run-eyg: build-eyg
-	./$(BUILD_DIR)/$(EYG_BINARY_NAME)
 
 # Install dependencies for all modules
 .PHONY: deps
@@ -102,21 +80,16 @@ vet:
 
 # Check code quality for all modules (fmt, vet, test)
 .PHONY: check
-check: fmt vet test-all
+check: fmt vet test
 
 # Build for production (optimized)
 .PHONY: build-prod
-build-prod: build-prod-lox build-prod-eyg
+build-prod: build-prod-lox
 
 # Build main interpreter for production
 .PHONY: build-prod-lox
 build-prod-lox: $(BUILD_DIR)
 	CGO_ENABLED=0 go build -ldflags="-w -s" -o $(BUILD_DIR)/$(BINARY_NAME) $(APP_DIR)/*.go
-
-# Build EYG interpreter for production
-.PHONY: build-prod-eyg
-build-prod-eyg: $(BUILD_DIR)
-	cd $(EYG_DIR) && CGO_ENABLED=0 go build -ldflags="-w -s" -o ../$(BUILD_DIR)/$(EYG_BINARY_NAME) .
 
 # Help target
 .PHONY: help
@@ -124,21 +97,15 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "Build targets:"
-	@echo "  build-all    - Build both interpreters (default)"
 	@echo "  build        - Build the main Lox interpreter"
-	@echo "  build-eyg    - Build the EYG interpreter"
 	@echo "  build-prod   - Build both interpreters optimized for production"
 	@echo ""
 	@echo "Test targets:"
-	@echo "  test-all     - Run all tests"
 	@echo "  test         - Run main interpreter tests"
-	@echo "  test-eyg     - Run EYG interpreter tests"
 	@echo "  test-coverage- Run main interpreter tests with coverage"
-	@echo "  test-eyg-coverage - Run EYG interpreter tests with coverage"
 	@echo ""
 	@echo "Run targets:"
-	@echo "  run          - Run the main Lox interpreter (use ARGS='...' for arguments)"
-	@echo "  run-eyg      - Run the EYG interpreter"
+	@echo "  run          - Run the main interpreter (use ARGS='...' for arguments)"
 	@echo ""
 	@echo "Development targets:"
 	@echo "  clean        - Clean build artifacts"

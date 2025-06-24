@@ -1,4 +1,4 @@
-package main
+package eyg
 
 import (
 	"encoding/json"
@@ -60,7 +60,7 @@ func parseValue(raw map[string]interface{}) Value {
 		value := parseValue(taggedMap["value"].(map[string]interface{}))
 		return &Tagged{Tag: label, Value: value}
 	}
-	
+
 	log.Printf("Unknown value type: %+v", raw)
 	return nil
 }
@@ -74,7 +74,7 @@ func valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// Handle slices (lists)
 	if sliceA, okA := a.([]Value); okA {
 		if sliceB, okB := b.([]Value); okB {
@@ -90,7 +90,7 @@ func valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// Handle maps (records)
 	if mapA, okA := a.(map[string]Value); okA {
 		if mapB, okB := b.(map[string]Value); okB {
@@ -118,7 +118,7 @@ func valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// Handle maps (interface{} version)
 	if mapA, okA := a.(map[string]interface{}); okA {
 		if mapB, okB := b.(map[string]Value); okB {
@@ -145,7 +145,7 @@ func valuesEqual(a, b Value) bool {
 		}
 		return false
 	}
-	
+
 	// For other types, use reflect.DeepEqual
 	return reflect.DeepEqual(a, b)
 }
@@ -165,37 +165,37 @@ func runTestSuite(filename string, t *testing.T) {
 	for _, testCase := range suite {
 		t.Run(testCase.Name, func(t *testing.T) {
 			state := Eval(testCase.Source)
-			
+
 			// Handle effects
 			for _, expectedEffect := range testCase.Effects {
 				if state.Break == nil {
 					t.Fatalf("Expected effect %s but got no break", expectedEffect.Label)
 				}
-				
+
 				effect, ok := state.Break.(*Effect)
 				if !ok {
 					t.Fatalf("Expected effect but got break: %+v", state.Break)
 				}
-				
+
 				if effect.Label != expectedEffect.Label {
 					t.Fatalf("Expected effect label %s but got %s", expectedEffect.Label, effect.Label)
 				}
-				
+
 				expectedLift := parseValue(expectedEffect.Lift)
 				if !valuesEqual(effect.Lift, expectedLift) {
 					t.Fatalf("Effect lift mismatch. Expected: %+v, Got: %+v", expectedLift, effect.Lift)
 				}
-				
+
 				reply := parseValue(expectedEffect.Reply)
 				state.Resume(reply)
 			}
-			
+
 			// Check final result
 			if testCase.Break != nil {
 				if state.Break == nil {
 					t.Fatalf("Expected break but got value: %+v", state.Control)
 				}
-				
+
 				// For now, just check that we have some kind of break
 				// We can make this more specific later
 				if !reflect.DeepEqual(state.Break, testCase.Break) {
@@ -206,7 +206,7 @@ func runTestSuite(filename string, t *testing.T) {
 				if state.Break != nil {
 					t.Fatalf("Expected value but got break: %+v", state.Break)
 				}
-				
+
 				expected := parseValue(testCase.Value)
 				if !valuesEqual(state.Control, expected) {
 					t.Fatalf("Value mismatch. Expected: %+v, Got: %+v", expected, state.Control)
@@ -237,7 +237,7 @@ func TestSimpleExpression(t *testing.T) {
 		"0": "i",
 		"v": 42,
 	}
-	
+
 	state := Eval(expr)
 	if state.Control == nil {
 		t.Errorf("Expected control value, got nil")

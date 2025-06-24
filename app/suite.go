@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/codecrafters-io/interpreter-starter-go/app/eyg"
 	"os"
 	"path/filepath"
 	"strings"
@@ -115,18 +116,10 @@ func RunSuite(filter string) error {
 		}
 		fmt.Printf("----------------------------------------\n")
 
-		// Save IR to a file
-		irFile := filepath.Join(tempDir, fmt.Sprintf("%s.ir.json", test.Name))
-		err = os.WriteFile(irFile, irJson, 0644)
-		if err != nil {
-			fmt.Printf("Error writing IR file: %v\n", err)
-			continue
-		}
-
 		// Run the interpreter
 		fmt.Printf("INTERPRETER RESULT:\n")
 		fmt.Printf("----------------------------------------\n")
-		
+
 		// Parse the IR JSON into an Expression
 		var irExpressions []map[string]interface{}
 		err = json.Unmarshal(irJson, &irExpressions)
@@ -135,13 +128,7 @@ func RunSuite(filter string) error {
 		} else if len(irExpressions) > 0 {
 			// Use the first expression as the entry point
 			expr := irExpressions[0]
-			
-			// Import the interpreter package
-			// Note: This is a workaround since we can't directly import from eyg-interpreter
-			// In a real implementation, we would refactor the interpreter to be importable
-			fmt.Printf("IR saved to: %s\n", irFile)
-			fmt.Printf("Note: Direct interpreter integration not available.\n")
-			fmt.Printf("IR Expression: %v\n", expr)
+			eyg.Eval(expr)
 		} else {
 			fmt.Printf("No expressions found in IR JSON\n")
 		}
@@ -152,4 +139,3 @@ func RunSuite(filter string) error {
 
 	return nil
 }
-
