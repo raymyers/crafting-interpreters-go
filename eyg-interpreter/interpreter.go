@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Expression type constants
@@ -926,23 +927,73 @@ func (s *State) builtinStringReplace(args ...Value) {
 }
 
 func (s *State) builtinStringUppercase(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_uppercase not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("string_uppercase expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	str, ok := args[0].(string)
+	if !ok {
+		s.Break = fmt.Errorf("string_uppercase expects string argument")
+		return
+	}
+	
+	s.SetValue(strings.ToUpper(str))
 }
 
 func (s *State) builtinStringLowercase(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_lowercase not implemented")
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("string_lowercase expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	str, ok := args[0].(string)
+	if !ok {
+		s.Break = fmt.Errorf("string_lowercase expects string argument")
+		return
+	}
+	
+	s.SetValue(strings.ToLower(str))
 }
 
 func (s *State) builtinStringEndsWith(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_ends_with not implemented")
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("string_ends_with expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	str, okA := args[0].(string)
+	suffix, okB := args[1].(string)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("string_ends_with expects string arguments")
+		return
+	}
+	
+	if strings.HasSuffix(str, suffix) {
+		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
+	} else {
+		s.SetValue(&Tagged{Tag: "False", Value: make(map[string]Value)})
+	}
 }
 
 func (s *State) builtinStringStartsWith(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_starts_with not implemented")
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("string_starts_with expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	str, okA := args[0].(string)
+	prefix, okB := args[1].(string)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("string_starts_with expects string arguments")
+		return
+	}
+	
+	if strings.HasPrefix(str, prefix) {
+		s.SetValue(&Tagged{Tag: "True", Value: make(map[string]Value)})
+	} else {
+		s.SetValue(&Tagged{Tag: "False", Value: make(map[string]Value)})
+	}
 }
 
 func (s *State) builtinStringLength(args ...Value) {
