@@ -44,6 +44,13 @@ type ErrorValue struct {
 
 func (ErrorValue) implValue() {}
 
+// BinaryValue represents a binary data value
+type BinaryValue struct {
+	Val []byte
+}
+
+func (BinaryValue) implValue() {}
+
 type UnionValue struct {
 	Constructor string
 	Value       Value

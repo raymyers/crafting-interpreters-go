@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go implementation of the Lox interpreter following the "Crafting Interpreters" book by Robert Nystrom. It's part of the CodeCrafters "Build your own Interpreter" challenge. The interpreter implements a tree-walk interpreter that can tokenize, parse, and evaluate Lox expressions.
-
+This is a Go implementation of an interpreter for EYG lang
 ## Common Commands
 
 ### Building and Running
 - `make build` - Build the interpreter binary to `build/interpreter`
-- `make run ARGS="tokenize example.lox"` - Run the interpreter with arguments
-- `./your_program.sh tokenize filename.lox` - Tokenize a Lox file
-- `./your_program.sh parse filename.lox` - Parse a Lox file and print AST
-- `./your_program.sh evaluate filename.lox` - Evaluate a Lox expression
+- `make run ARGS="tokenize example"` - Run the interpreter with arguments
+- `./your_program.sh tokenize filename` - Tokenize a file
+- `./your_program.sh parse filename` - Parse a file and print AST
+- `./your_program.sh evaluate filename` - Evaluate a expression
+
+**Important**: you can also use `-c` to pass a code string directly, or `--in` to read stdin 
 
 ### Testing
 - `make test` - Run all tests with verbose output
@@ -80,14 +81,6 @@ The project uses approval testing with the `go-approval-tests` library:
 - Test failures generate `*.received.txt` files for comparison
 - Tests cover tokenization, parsing, and evaluation separately
 
-### Current Implementation Status
-
-- ✅ Tokenization: Complete with all Lox tokens
-- ✅ Parsing: Complete expression parsing with precedence
-- ✅ Evaluation: Literals and grouping expressions implemented
-- ❌ Evaluation: Binary and unary operations need implementation
-- ❌ Statements: Not yet implemented
-- ❌ Variables and scoping: Not yet implemented
 
 ### Key Files
 

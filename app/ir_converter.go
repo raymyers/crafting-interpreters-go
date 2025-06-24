@@ -102,16 +102,25 @@ func (ic *IRConverter) convertLambda(expr *Lambda) IRNode {
 
 // convertCall converts a Call expression to IR
 func (ic *IRConverter) convertCall(expr *Call) IRNode {
-	calleeNode := map[string]interface{}{"0": "z"} // vacant
-
-	// For simplicity, we'll handle only single argument calls in this example
-	var argSource map[string]interface{}
-
-	return map[string]interface{}{
-		"0": "a",
-		"f": calleeNode,
-		"a": argSource,
+	if len(expr.Arguments) == 0 {
+		// No arguments, just return the callee
+		return ic.convertExpr(expr.Callee)
 	}
+
+	// Start with the callee
+	result := ic.convertExpr(expr.Callee)
+
+	// Apply each argument
+	for _, arg := range expr.Arguments {
+		argNode := ic.convertExpr(arg)
+		result = map[string]interface{}{
+			"0": "a",
+			"f": result,
+			"a": argNode,
+		}
+	}
+
+	return result
 }
 
 // convertLet converts a Var expression to IR
@@ -148,6 +157,16 @@ func (ic *IRConverter) convertLiteral(expr *Literal) IRNode {
 			"0": "i",
 			"v": int(v.Val), // Convert to int for simplicity
 		}
+	case BinaryValue:
+		encoded := base64.StdEncoding.EncodeToString(v.Val)
+		return map[string]interface{}{
+			"0": "x",
+			"v": map[string]interface{}{
+				"/": map[string]interface{}{
+					"bytes": encoded,
+				},
+			},
+		}
 	case BoolValue:
 		// Represent booleans as tagged unions in IR
 		if v.Val {
@@ -181,25 +200,34 @@ func (ic *IRConverter) convertEmptyRecord(expr *EmptyRecord) IRNode {
 }
 
 // convertRecord converts a Record expression to IR
-// This is a simplified implementation
 func (ic *IRConverter) convertRecord(expr *Record) IRNode {
 	// Start with an empty record
-	recordNode := ic.convertEmptyRecord(nil)
+	result := map[string]interface{}{
+		"0": "u",
+	}
 
-	// For simplicity, we'll just use the first field if available
-	if len(expr.Fields) > 0 {
-		field := expr.Fields[0]
+	// Build the record by extending it with each field
+	// Fields are added in reverse order to match the expected IR structure
+	for i := len(expr.Fields) - 1; i >= 0; i-- {
+		field := expr.Fields[i]
 		valueNode := ic.convertExpr(field.Value)
 
-		// Extend the record with the field
-		recordNode = map[string]interface{}{
-			"0": "e",
-			"l": field.Name,
-			"v": valueNode,
+		// Wrap in application node
+		result = map[string]interface{}{
+			"0": "a",
+			"a": result,
+			"f": map[string]interface{}{
+				"0": "a",
+				"a": valueNode,
+				"f": map[string]interface{}{
+					"0": "e",
+					"l": field.Name,
+				},
+			},
 		}
 	}
 
-	return recordNode
+	return result
 }
 
 // convertList converts a List expression to IR
@@ -210,24 +238,43 @@ func (ic *IRConverter) convertList(expr *List) IRNode {
 		}
 	}
 
-	// For simplicity, we'll just handle the first element
-	elemNode := ic.convertExpr(expr.Elements[0])
-
-	return map[string]interface{}{
-		"0": "c",
-		"h": elemNode,
-		"t": map[string]interface{}{"0": "ta"}, // empty tail
+	// Build the list from back to front
+	result := map[string]interface{}{
+		"0": "ta",
 	}
+
+	for i := len(expr.Elements) - 1; i >= 0; i-- {
+		elemNode := ic.convertExpr(expr.Elements[i])
+
+		// Cons operation is wrapped in application nodes
+		result = map[string]interface{}{
+			"0": "a",
+			"f": map[string]interface{}{
+				"0": "a",
+				"f": map[string]interface{}{
+					"0": "c",
+				},
+				"a": elemNode,
+			},
+			"a": result,
+		}
+	}
+
+	return result
 }
 
 // convertAccess converts an Access expression to IR
 func (ic *IRConverter) convertAccess(expr *Access) IRNode {
 	objectNode := ic.convertExpr(expr.Object)
 
+	// Access is wrapped in an application node
 	return map[string]interface{}{
-		"0": "g",
-		"l": expr.Name,
-		"r": objectNode,
+		"0": "a",
+		"a": objectNode,
+		"f": map[string]interface{}{
+			"0": "g",
+			"l": expr.Name,
+		},
 	}
 }
 
@@ -243,10 +290,14 @@ func (ic *IRConverter) convertBuiltin(expr *Builtin) IRNode {
 func (ic *IRConverter) convertUnion(expr *Union) IRNode {
 	valueNode := ic.convertExpr(expr.Value)
 
+	// Union is wrapped in an application node
 	return map[string]interface{}{
-		"0": "t",
-		"l": expr.Constructor,
-		"v": valueNode,
+		"0": "a",
+		"a": valueNode,
+		"f": map[string]interface{}{
+			"0": "t",
+			"l": expr.Constructor,
+		},
 	}
 }
 
