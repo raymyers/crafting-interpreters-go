@@ -65,3 +65,6 @@ coverage/
 
 # Test artifacts
 *.received.txt
+
+# Stuff copied
+eyg-docs/
