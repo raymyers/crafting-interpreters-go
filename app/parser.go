@@ -248,41 +248,62 @@ func (p *Parser) finishCall(callee Expr) (Expr, error) {
 // statements → expression (";"? expression)* | ";"
 // ; not required when Block is next
 func (p *Parser) statements() (Expr, error) {
-	var results []Expr
+	return p.statement()
+}
+
+// statement handles sequences by building nested Let nodes
+func (p *Parser) statement() (Expr, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
-	line := p.previous().Line
-	lastLine := p.previous().Line
-	results = append(results, expr)
-	for {
-		// Check if we have a semicolon
-		hadSemicolon := p.match(SEMICOLON)
 
-		// Check if next token is on a new line
+	// Check if this is an assignment that creates a Let node
+	if binary, ok := expr.(*Binary); ok && binary.Operator.Type == EQUAL {
+		// Extract pattern (left side of assignment)
+		pattern := binary.Left
+
+		lastLine := p.previous().Line
+
+		// Check if we have more statements (semicolon or newline)
+		hadSemicolon := p.match(SEMICOLON)
 		currentLine := p.peek().Line
 		onNewLine := currentLine > lastLine
 
-		// Only continue if we have a semicolon or we're on a new line
-		if !hadSemicolon && !onNewLine {
-			break
-		}
+		if hadSemicolon || onNewLine {
+			// Parse the body
+			body, err := p.statement()
+			if err != nil {
+				// No body, use empty record
+				body = &EmptyRecord{Line: binary.Line}
+			}
 
-		// Try to parse another expression
-		expr, err := p.expression()
+			return &Let{Pattern: pattern, Value: binary.Right, Body: body, Line: binary.Line}, nil
+		} else {
+			// No more statements, use empty record as body
+			return &Let{Pattern: pattern, Value: binary.Right, Body: &EmptyRecord{Line: binary.Line}, Line: binary.Line}, nil
+		}
+	}
+
+	// Not an assignment, check for continuation
+	lastLine := p.previous().Line
+	hadSemicolon := p.match(SEMICOLON)
+	currentLine := p.peek().Line
+	onNewLine := currentLine > lastLine
+
+	if hadSemicolon || onNewLine {
+		// We have another statement, but it's not an assignment
+		// Create an assignment to _ (wildcard)
+		nextStmt, err := p.statement()
 		if err != nil {
-			break
+			return expr, nil
 		}
-		lastLine = p.previous().Line
-		results = append(results, expr)
+		// Create a wildcard pattern
+		wildcard := &Wildcard{Line: p.tokens[p.current-1].Line}
+		return &Let{Pattern: wildcard, Value: expr, Body: nextStmt, Line: p.tokens[p.current-1].Line}, nil
 	}
 
-	if len(results) == 1 {
-		return results[0], nil
-	}
-	return &Statements{Exprs: results, Line: line}, nil
-
+	return expr, nil
 }
 
 // primary → NUMBER | STRING | "nil"

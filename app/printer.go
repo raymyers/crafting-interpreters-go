@@ -225,8 +225,20 @@ func (ap *AstPrinter) VisitDestructure(expr *Destructure) Value {
 	return StringValue{Val: fmt.Sprintf("(destructure %s)", strings.Join(fields, " "))}
 }
 
-func (ap *AstPrinter) VisitSeq(expr *Seq) Value {
-	return StringValue{Val: fmt.Sprintf("(seq %s %s)", expr.Left.Accept(ap).(StringValue).Val, expr.Right.Accept(ap).(StringValue).Val)}
+func (ap *AstPrinter) VisitLet(expr *Let) Value {
+	// Get pattern string
+	var patternStr string
+	if variable, ok := expr.Pattern.(*Variable); ok {
+		patternStr = variable.Name.Lexeme
+	} else {
+		// For destructuring or other patterns, use the pattern's string representation
+		patternStr = expr.Pattern.Accept(ap).(StringValue).Val
+	}
+
+	return StringValue{Val: fmt.Sprintf("(let %s %s %s)",
+		patternStr,
+		expr.Value.Accept(ap).(StringValue).Val,
+		expr.Body.Accept(ap).(StringValue).Val)}
 }
 
 func (ap *AstPrinter) VisitWildcard(expr *Wildcard) Value {

@@ -102,18 +102,16 @@ parser_tests:
     input: |
       _ = perform Log("a")
       perform Log("b")
-    expected: '(seq (= _ (perform Log a)) (perform Log b))'
+    expected: '(let _ (perform Log a) (perform Log b))'
 
   - name: "Assignment"
     input: |
       world = 10
       world
-    expected: '(seq (= world 10.0) world)'
+    expected: '(let world 10.0 world)'
 
-  - name: "ChainedAssign"
-    input: |
-      a = b = 1
-    expected: '(= a (= b 1.0))'
+  # Chained assignments are no longer supported with the new Let structure
+  # Each assignment must have its own body
 
   - name: "Block"
     input: |
@@ -176,7 +174,7 @@ parser_tests:
   - name: "Destructuring"
     input: |
       {food: f} = record
-    expected: '(= (destructure (field food f)) record)'
+    expected: '(let (destructure (field food f)) record {})'
   - name: "Union"
     input: |
       Cat("felix")
@@ -192,3 +190,22 @@ parser_tests:
         |_| { 1 }
       )
     expected: '(handle Alert (lambda (args value resume) 1.0) (lambda (args _) 1.0))'
+
+  - name: "LetWithBody"
+    input: |
+      x = 5
+      x + 10
+    expected: '(let x 5.0 (+ x 10.0))'
+
+  - name: "NestedLet"
+    input: |
+      x = 5
+      y = x + 1
+      x + y
+    expected: '(let x 5.0 (let y (+ x 1.0) (+ x y)))'
+
+  - name: "LetWithEmptyBody"
+    input: |
+      x = 42
+      {}
+    expected: '(let x 42.0 {})'

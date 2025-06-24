@@ -1145,23 +1145,63 @@ func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
 	return ErrorValue{Message: "Destructure not implemented", Line: expr.Line}
 }
 
-func (e *Evaluator) VisitSeq(expr *Seq) Value {
-	// Evaluate left expression first
-	leftResult := e.Evaluate(expr.Left)
+func (e *Evaluator) VisitLet(expr *Let) Value {
+	// Evaluate the value expression
+	value := e.Evaluate(expr.Value)
 
-	// If left produces an error or effect, propagate it immediately
-	if _, isError := leftResult.(ErrorValue); isError {
-		return leftResult
+	// If value produces an error or effect, propagate it immediately
+	if _, isError := value.(ErrorValue); isError {
+		return value
 	}
-	if _, isEffect := leftResult.(EffectValue); isEffect {
-		return leftResult
+	if _, isEffect := value.(EffectValue); isEffect {
+		return value
 	}
 
-	// Then evaluate right expression
-	rightResult := e.Evaluate(expr.Right)
+	// Create new scope with the binding
+	previousScope := e.scope
+	e.scope = NewScope(previousScope)
 
-	// Return the result of the right expression (sequence returns last value)
-	return rightResult
+	// Handle different pattern types
+	switch pattern := expr.Pattern.(type) {
+	case *Variable:
+		// Simple variable binding
+		e.scope.define(pattern.Name.Lexeme, value)
+	case *Wildcard:
+		// Wildcard binding - don't actually bind anything
+		// The value was evaluated for its side effects
+	case *Destructure:
+		// Destructuring binding
+		// Value should be a RecordValue
+		recordVal, ok := value.(RecordValue)
+		if !ok {
+			return ErrorValue{Message: "Cannot destructure non-record value", Line: expr.Line}
+		}
+
+		// Bind each field from the pattern
+		for _, field := range pattern.Fields {
+			if varExpr, ok := field.Value.(*Variable); ok {
+				// Get the value from the record
+				if fieldValue, exists := recordVal.Fields[field.Name]; exists {
+					e.scope.define(varExpr.Name.Lexeme, fieldValue)
+				} else {
+					// Field doesn't exist in record, bind to nil/empty record
+					e.scope.define(varExpr.Name.Lexeme, RecordValue{Fields: make(map[string]Value)})
+				}
+			} else {
+				return ErrorValue{Message: "Destructuring patterns can only bind to variables", Line: expr.Line}
+			}
+		}
+	default:
+		return ErrorValue{Message: "Invalid pattern in let binding", Line: expr.Line}
+	}
+
+	// Evaluate the body expression in the new scope
+	result := e.Evaluate(expr.Body)
+
+	// Restore previous scope
+	e.scope = previousScope
+
+	return result
 }
 
 func (e *Evaluator) VisitWildcard(expr *Wildcard) Value {

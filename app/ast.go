@@ -123,7 +123,7 @@ type ExprVisitor interface {
 	VisitThunk(expr *Thunk) Value
 	VisitSpread(expr *Spread) Value
 	VisitDestructure(expr *Destructure) Value
-	VisitSeq(expr *Seq) Value
+	VisitLet(expr *Let) Value
 	VisitWildcard(expr *Wildcard) Value
 }
 
@@ -401,15 +401,16 @@ func (d *Destructure) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitDestructure(d)
 }
 
-// Seq represents a sequence of expressions
-type Seq struct {
-	Left  Expr
-	Right Expr
-	Line  uint
+// Let represents a let binding with a body
+type Let struct {
+	Pattern Expr // Can be Variable, Destructure, or Wildcard
+	Value   Expr
+	Body    Expr
+	Line    uint
 }
 
-func (s *Seq) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitSeq(s)
+func (l *Let) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitLet(l)
 }
 
 // Wildcard represents a wildcard pattern (_) in match expressions
