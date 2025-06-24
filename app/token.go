@@ -12,8 +12,11 @@ const (
 	RPAR
 	LBRAC
 	RBRAC
+	LEFT_BRACKET
+	RIGHT_BRACKET
 	STAR
 	DOT
+	DOT_DOT
 	COMMA
 	PLUS
 	MINUS
@@ -27,25 +30,25 @@ const (
 	GREATER
 	GREATER_EQUAL
 	SLASH
+	PIPE
+	PIPE_PIPE
+	AT
+	COLON
+	ARROW
+	HASH
 	STRING
 	NUMBER
 	IDENTIFIER
 	AND
-	CLASS
 	ELSE
-	FALSE
-	FOR
-	FUN
 	IF
 	NIL
 	OR
-	PRINT
-	RETURN
-	SUPER
-	THIS
-	TRUE
-	VAR
-	WHILE
+	MATCH
+	PERFORM
+	HANDLE
+	NOT
+	UNDERSCORE
 )
 
 var tokenTypeName = map[TokenType]string{
@@ -54,8 +57,11 @@ var tokenTypeName = map[TokenType]string{
 	RPAR:          "RIGHT_PAREN",
 	LBRAC:         "LEFT_BRACE",
 	RBRAC:         "RIGHT_BRACE",
+	LEFT_BRACKET:  "LEFT_BRACKET",
+	RIGHT_BRACKET: "RIGHT_BRACKET",
 	STAR:          "STAR",
 	DOT:           "DOT",
+	DOT_DOT:       "DOT_DOT",
 	COMMA:         "COMMA",
 	PLUS:          "PLUS",
 	MINUS:         "MINUS",
@@ -69,25 +75,25 @@ var tokenTypeName = map[TokenType]string{
 	GREATER:       "GREATER",
 	GREATER_EQUAL: "GREATER_EQUAL",
 	SLASH:         "SLASH",
+	PIPE:          "PIPE",
+	PIPE_PIPE:     "PIPE_PIPE",
+	AT:            "AT",
+	COLON:         "COLON",
+	ARROW:         "ARROW",
+	HASH:          "HASH",
 	STRING:        "STRING",
 	NUMBER:        "NUMBER",
 	IDENTIFIER:    "IDENTIFIER",
 	AND:           "AND",
-	CLASS:         "CLASS",
 	ELSE:          "ELSE",
-	FALSE:         "FALSE",
-	FOR:           "FOR",
-	FUN:           "FUN",
 	IF:            "IF",
 	NIL:           "NIL",
 	OR:            "OR",
-	PRINT:         "PRINT",
-	RETURN:        "RETURN",
-	SUPER:         "SUPER",
-	THIS:          "THIS",
-	TRUE:          "TRUE",
-	VAR:           "VAR",
-	WHILE:         "WHILE",
+	MATCH:         "MATCH",
+	PERFORM:       "PERFORM",
+	HANDLE:        "HANDLE",
+	NOT:           "NOT",
+	UNDERSCORE:    "UNDERSCORE",
 }
 
 type Token struct {

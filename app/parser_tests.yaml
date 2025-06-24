@@ -1,7 +1,7 @@
 parser_tests:
   - name: "FunctionCallNoArgs"
-    input: "foo()"
-    expected: "(call foo)"
+    input: "foo({})"
+    expected: "(call foo {})"
 
   - name: "FunctionCallOneArg"
     input: "foo(42)"
@@ -11,13 +11,13 @@ parser_tests:
     input: "foo(1, 2, 3)"
     expected: "(call foo 1.0 2.0 3.0)"
 
-  - name: "FunctionCallWithExpressions"
-    input: "foo(1 + 2, bar)"
-    expected: "(call foo (+ 1.0 2.0) bar)"
+  - name: "BuiltinCall"
+    input: "!int_add(1, 2)"
+    expected: "(call (builtin int_add) 1.0 2.0)"
 
   - name: "ChainedFunctionCalls"
-    input: "foo()(bar)"
-    expected: "(call (call foo) bar)"
+    input: "foo({})(bar)"
+    expected: "(call (call foo {}) bar)"
   - name: "Number"
     input: "42"
     expected: "42.0"
@@ -27,12 +27,12 @@ parser_tests:
     expected: "hello"
 
   - name: "Boolean"
-    input: "true"
-    expected: "true"
+    input: "True({})"
+    expected: "(union True {})"
 
-  - name: "Nil"
-    input: "nil"
-    expected: "nil"
+  - name: "EmptyRecord"
+    input: "{}"
+    expected: "{}"
 
   - name: "Addition"
     input: "2 + 3"
@@ -66,9 +66,9 @@ parser_tests:
     input: "-42"
     expected: "(- 42.0)"
 
-  - name: "UnaryBang"
-    input: "!true"
-    expected: "(! true)"
+  - name: "LogicalNot"
+    input: "!True({})"
+    expected: "(! (union True {}))"
 
   - name: "Grouping"
     input: "(2 + 3)"
@@ -94,102 +94,118 @@ parser_tests:
     input: "3.14 + 2.71"
     expected: "(+ 3.14 2.71)"
 
-  - name: "Print"
-    input: 'print "hello"'
-    expected: '(print hello)'
+  - name: "Effect"
+    input: 'perform Log("hello")'
+    expected: '(perform Log hello)'
 
-  - name: "SeqPrints"
+  - name: "SeqEffects"
     input: |
-      print "a";
-      print "b";
-    expected: '(seq (print a) (print b))'
+      _ = perform Log("a")
+      perform Log("b")
+    expected: '(let _ (perform Log a) (perform Log b))'
 
-  - name: "Var"
-    input: var world = 10;
-    expected: '(var world 10.0)'
+  - name: "Assignment"
+    input: |
+      world = 10
+      world
+    expected: '(let world 10.0 world)'
 
-  - name: "VarNil"
-    input: var world;
-    expected: '(var world nil)'
-
-  - name: "Assign"
-    input: a = b = 1
-    expected: '(= a (= b 1.0))'
+  # Chained assignments are no longer supported with the new Let structure
+  # Each assignment must have its own body
 
   - name: "Block"
     input: |
       {
-        print "a";
-        print "b";
+        perform Log("a")
+        perform Log("b")
       }
-    expected: '(block (print a) (print b))'
-  - name: "Blocks"
+    expected: '(block (perform Log a) (perform Log b))'
+  - name: "Records"
     input: |
-      {
-        1
+      {name: "Alice", age: 30}
+    expected: '(record (field name Alice) (field age 30.0))'
+  - name: "RecordAccess"
+    input: |
+      alice.name
+    expected: '(access alice name)'
+  - name: "List"
+    input: |
+      [1, 2, 3]
+    expected: '(list 1.0 2.0 3.0)'
+  - name: "ListSpread"
+    input: |
+      [0, ..items]
+    expected: '(list 0.0 (spread items))'
+  - name: "Match"
+    input: |
+      match value {
+        Ok(x) -> x
+        Error(_) -> 0
       }
-      {
-        2
-      }
-    expected: '(seq (block 1.0) (block 2.0))'
-  - name: "Statement before and after block"
+    expected: '(match value (case (pattern Ok x) x) (case (pattern Error _) 0.0))'
+  - name: "Lambda"
     input: |
-      1
-      {
-        2
-      }
-      3
-    expected: '(seq 1.0 (block 2.0) 3.0)'
-  - name: "if"
+      |x, y| { !int_add(x, y) }
+    expected: '(lambda (args x y) (call (builtin int_add) x y))'
+  - name: "NamedRef"
     input: |
-      if (true) {
-        1
-      }
-    expected: '(if true (block 1.0))'
-  - name: "ifElse"
-    input: |
-      if (true) {
-        1
-      } else {
-        2
-      }
-    expected: '(if true (block 1.0) (block 2.0))'
-  - name: "ifNoBlock"
-    input: |
-      if (true) 1;
-      else 2;
-    expected: '(if true 1.0 2.0)'
-  - name: "Or"
-    input: |
-      print false or false or true;
-    expected: '(print (or (or false false) true))'
-  - name: "And"
-    input: |
-      true and false
-    expected: '(and true false)'
+      @std:1
+    expected: '(named_ref std 1)'
   
-  - name: "While"
+  - name: "FixedPoint"
     input: |
-      while (x < 3) print x;
-    expected: '(while (< x 3.0) (print x))'
+      !fix(|loop, x| {
+        match !int_less_than(x, 3) {
+          True(_) -> loop(!int_add(x, 1))
+          False(_) -> x
+        }
+      })
+    expected: '(call (builtin fix) (lambda (args loop x) (match (call (builtin int_less_than) x 3.0) (case (pattern True _) (call loop (call (builtin int_add) x 1.0))) (case (pattern False _) x))))'
   
-  - name: "WhileBlock"
+  - name: "Handle"
     input: |
-      while (x < 10) {
-        print x;
-        x = x + 1;
-      }
-    expected: '(while (< x 10.0) (block (print x) (= x (+ x 1.0))))'
-  - name: "For"
+      handle Alert(
+        |value, resume| {
+          resume({})
+        },
+        |_| { {} }
+      )
+    expected: '(handle Alert (lambda (args value resume) (call resume {})) (lambda (args _) {}))'
+  - name: "Destructuring"
     input: |
-      for (var baz = 0; baz < 3; baz) print baz = baz + 1;
-    expected: '(for (var baz 0.0) (< baz 3.0) baz (print (= baz (+ baz 1.0))))'
-  - name: "EmptyFor"
+      {food: f} = record
+    expected: '(let (destructure (field food f)) record {})'
+  - name: "Union"
     input: |
-      for (;;) {}
-    expected: '(for nil nil nil (block))'
-  - name: "EmptyFor"
+      Cat("felix")
+    expected: '(union Cat felix)'
+  - name: "EmptyThunk"
     input: |
-      fun foo() {
-      }
-    expected: '(fun foo (args) (block))'
+      || {}
+    expected: '(thunk {})'
+  - name: "Handle"
+    input: |
+      handle Alert(
+        |value, resume| { 1 },
+        |_| { 1 }
+      )
+    expected: '(handle Alert (lambda (args value resume) 1.0) (lambda (args _) 1.0))'
+
+  - name: "LetWithBody"
+    input: |
+      x = 5
+      x + 10
+    expected: '(let x 5.0 (+ x 10.0))'
+
+  - name: "NestedLet"
+    input: |
+      x = 5
+      y = x + 1
+      x + y
+    expected: '(let x 5.0 (let y (+ x 1.0) (+ x y)))'
+
+  - name: "LetWithEmptyBody"
+    input: |
+      x = 42
+      {}
+    expected: '(let x 42.0 {})'

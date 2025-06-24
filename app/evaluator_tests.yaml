@@ -8,12 +8,12 @@ evaluator_tests:
     expected: "hello"
 
   - name: "Boolean"
-    input: "true"
-    expected: "true"
+    input: "True({})"
+    expected: "True({})"
 
   - name: "Nil"
-    input: "nil"
-    expected: "nil"
+    input: "{}"
+    expected: "{}"
 
   - name: "Addition"
     input: "2 + 3"
@@ -33,27 +33,27 @@ evaluator_tests:
 
   - name: "LessThan"
     input: "3 < 5"
-    expected: "true"
+    expected: "True({})"
 
   - name: "LessThanOrEqual"
     input: "7 <= 5"
-    expected: "false"
+    expected: "False({})"
 
   - name: "GreaterThan"
     input: "5 > 3"
-    expected: "true"
+    expected: "True({})"
 
   - name: "GreaterThanOrEqual"
     input: "5 >= 3"
-    expected: "true"
+    expected: "True({})"
 
   - name: "Equality"
     input: "1 == 1"
-    expected: "true"
+    expected: "True({})"
 
   - name: "Inequality"
     input: "1 != 2"
-    expected: "true"
+    expected: "True({})"
 
   - name: "UnaryMinus"
     input: "-42"
@@ -63,17 +63,17 @@ evaluator_tests:
     input: "-73"
     expected: "-73"
 
-  - name: "UnaryBang"
-    input: "!true"
-    expected: "false"
+  - name: "LogicalNot"
+    input: "not True({})"
+    expected: "False({})"
 
-  - name: "UnaryBangFloat"
-    input: "!10.40"
-    expected: "false"
+  - name: "LogicalNotNumber"
+    input: "not 10.40"
+    expected: "False({})"
 
-  - name: "UnaryBangGrouped"
-    input: "!((false))"
-    expected: "true"
+  - name: "LogicalNotGrouped"
+    input: "not (not False({}))"
+    expected: "False({})"
 
   - name: "Grouping"
     input: "(2 + 3)"
@@ -93,7 +93,7 @@ evaluator_tests:
 
   - name: "MixedTypes"
     input: '"hello" == "world"'
-    expected: "false"
+    expected: "False({})"
 
   - name: "FloatNumbers"
     input: "3.14 + 2.71"
@@ -109,27 +109,27 @@ evaluator_tests:
 
   - name: "StringEqTrue"
     input: '"hello" == "hello"'
-    expected: "true"
+    expected: "True({})"
 
   - name: "StringNeqTrue"
     input: '"hello" != "world"'
-    expected: "true"
+    expected: "True({})"
 
   - name: "StringEqFalse"
     input: '"hello" == "world"'
-    expected: "false"
+    expected: "False({})"
 
   - name: "StringNeqFalse"
     input: '"hello" != "hello"'
-    expected: "false"
+    expected: "False({})"
 
   - name: "Print"
-    input: 'print "hello"'
-    expected: "nil"
+    input: 'perform Log("hello")'
+    expected: "{}"
 
   - name: "Print"
-    input: 'print 5'
-    expected: "nil"
+    input: 'perform Log(5)'
+    expected: "{}"
 
   - name: "AddNumbersToString"
     input: '4 + "a" + 7'
@@ -138,33 +138,22 @@ evaluator_tests:
 
   - name: "Vars"
     input: |
-      var a = "hello";
+      a = "hello"
       a
     expected: "hello"
 
   - name: "VarAssign"
     input: |
-      var a = "hello";
-      a = "world";
+      a = "hello"
+      a = "world"
       a
     expected: "world"
 
   - name: "Block"
     input: |
       {
-        var a = {
+        a = {
           1 + 1
-        };
-        a
-      }
-    expected: "2"
-
-  - name: "NestedScope"
-    input: |
-      {
-        var a = 1;
-        {
-          a = 2
         }
         a
       }
@@ -173,9 +162,9 @@ evaluator_tests:
   - name: "NestedScopeRedefine"
     input: |
       {
-        var a = 1;
+        a = 1
         {
-          var a = 2
+          a = 2
         }
         a
       }
@@ -183,27 +172,29 @@ evaluator_tests:
 
   - name: "IfTrue"
     input: |
-      var a = 1;
-      if (true) {
-        a = 2;
+      a = 1
+      match True({}) {
+        True(_) -> a = 2
+        False(_) -> a
       }
       a
-    expected: "2"
+    expected: "1"
   - name: "IfFalse"
     input: |
-      var a = 1;
-      if (false) {
-        a = 2;
+      a = 1
+      match False({}) {
+        True(_) -> a = 2
+        False(_) -> a
       }
       a
     expected: "1"
   - name: "Or"
     input: |
-      false or false or true;
-    expected: "true"
+      False({}) or False({}) or True({})
+    expected: "True({})"
   - name: "OrFirstTruthy"
     input: |
-      27 or true
+      27 or True({})
     expected: "27"
   - name: "AndLastTruthy"
     input: |
@@ -211,89 +202,140 @@ evaluator_tests:
     expected: "67"
   - name: "AndFalse"
     input: |
-      false and 56
-    expected: "false"
-  - name: "While"
+      False({}) and 56
+    expected: "False({})"
+  - name: "Clock builtin"
     input: |
-      var foo = 0;
-      while (foo < 3) print foo = foo + 1;
-    expected: "nil"
-    expectedOutput: |
-      1
-      2
-      3
-  - name: "For"
-    input: |
-      for (var world = 0; world < 3; world = world + 1) {
-        print world;
-      }
-    expected: "nil"
-    expectedOutput: |
-      0
-      1
-      2
-  - name: "Clock"
-    input: |
-      clock() > 0
-    expected: "true"
-  - name: "zero-arg fun"
-    input: |
-      fun foo() { print "hello" }
-      foo()
-    expected: "nil"
-    expectedOutput: "hello\n"
+      !clock({}) > 0
+    expected: "True({})"
   - name: "print fun"
     input: |
-      fun foo() { print "hello" }
-      print foo;
-    expected: "nil"
-    expectedOutput: "<fn foo>\n"
+      foo = |_| { perform Log("hello") }
+      perform Log(foo)
+    expected: "{}"
+    expectedOutput: "<lambda>\n"
   - name: "Function with one argument"
     input: |
-      fun greet(name) {
-        print "Hello, " + name + "!";
+      greet = |name| {
+        perform Log("Hello, " + name + "!")
       }
-      greet("World");
-    expected: "nil"
+      greet("World")
+    expected: "{}"
     expectedOutput: "Hello, World!\n"
   - name: "Function with two arguments"
     input: |
-      fun add(a, b) {
-        print a + b;
+      add = |a, b| {
+        perform Log(a + b)
       }
-      add(10, 20);
-    expected: "nil"
+      add(10, 20)
+    expected: "{}"
     expectedOutput: "30\n"
   - name: "Function with three arguments"
     input: |
-      fun multiply(x, y, z) {
-        print x * y * z;
+      multiply = |x, y, z| {
+        perform Log(x * y * z)
       }
-      multiply(2, 3, 4);
-    expected: "nil"
+      multiply(2, 3, 4)
+    expected: "{}"
     expectedOutput: "24\n"
   - name: "Function with expression arguments"
     input: |
-      fun add(a, b) {
-        print a + b;
+      add = |a, b| {
+        perform Log(a + b)
       }
-      add(5 * 2, 3 + 7);
-    expected: "nil"
+      add(5 * 2, 3 + 7)
+    expected: "{}"
     expectedOutput: "20\n"
-  - name: "Function with wrong argument count"
+  - name: "Function with partial application"
     input: |
-      fun add(a, b) {
-        print a + b;
+      add = |a, b| {
+        perform Log(a + b)
       }
-      add(1);
-    expected: "Evaluation error: Expected 2 arguments but got 1"
+      add(1)
+    expected: "<lambda>"
   - name: "Function arguments are scoped"
     input: |
-      fun test(x) {
-        var y = x + 1;
-        print y;
+      test = |x| {
+        y = x + 1
+        perform Log(y)
       }
-      test(5);
-      print x;
+      test(5)
+      perform Log(x)
     expected: "Evaluation error: Undefined variable 'x'"
     expectedOutput: "6\n"
+
+  - name: "Records"
+    input: |
+      alice = {name: "Alice"}
+      bob = {name: "Bob", height: 192}
+      alice.name
+    expected: "Alice"
+
+  - name: "Record spread"
+    input: |
+      bob = {name: "Bob", height: 192}
+      {height: 100, ..bob}
+    expected: "{height: 100, name: \"Bob\"}"
+
+  - name: "Lists"
+    input: |
+      items = [1, 2]
+      items = [10, ..items]
+      total = !list_fold(items, 0, |a, b| a + b)
+      total
+    expected: "13"
+
+  - name: "Match expressions"
+    input: |
+      match !int_parse("not a number") {
+        Ok(value) -> value
+        Error(_) -> -1
+      }
+    expected: "-1"
+
+  - name: "Match union types"
+    input: |
+      match Cat("felix") {
+        Cat(name) -> name
+        _ -> "wild"
+      }
+    expected: "felix"
+
+  - name: "Let destructuring"
+    input: |
+      {food: f} = {food: "Greens", action: "eat"}
+      f
+    expected: "Greens"
+
+  - name: "Higher order functions"
+    input: |
+      inc = |x| x + 1
+      twice = |f, x| {
+        f(f(x))
+      }
+      inc2 = twice(inc)
+      inc2(5)
+    expected: "7"
+
+  - name: "Named references"
+    input: |
+      std = @std:1
+      std.list.contains([1], 0)
+    expected: "False({})"
+  - name: "Handle"
+    input: |
+      capture = |exec| {
+        handle Alert(|value, resume| {
+            {return: return, alerts: alerts} = resume({})
+            {return: return, alerts: [value, ..alerts]}
+          },
+          |_| {alerts: [], return: exec({})}
+        )
+      }
+      run = |_| {
+        _ = perform Alert("first")
+        _ = perform Alert("second")
+        {}
+      }
+      capture(run)
+    expected: '{return: {}, alerts: ["first", "second"]}'

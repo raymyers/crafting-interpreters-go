@@ -50,16 +50,46 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			result = append(result, Token{LBRAC, "{", "", lineNo})
 		case '}':
 			result = append(result, Token{RBRAC, "}", "", lineNo})
+		case '[':
+			result = append(result, Token{LEFT_BRACKET, "[", "", lineNo})
+		case ']':
+			result = append(result, Token{RIGHT_BRACKET, "]", "", lineNo})
 		case '*':
 			result = append(result, Token{STAR, "*", "", lineNo})
 		case '.':
-			result = append(result, Token{DOT, ".", "", lineNo})
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{DOT, ".", "", lineNo})
+				break
+			}
+			if next == '.' {
+				result = append(result, Token{DOT_DOT, "..", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{DOT, ".", "", lineNo})
+			}
 		case ',':
 			result = append(result, Token{COMMA, ",", "", lineNo})
 		case '+':
 			result = append(result, Token{PLUS, "+", "", lineNo})
 		case '-':
-			result = append(result, Token{MINUS, "-", "", lineNo})
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{MINUS, "-", "", lineNo})
+				break
+			}
+			if next == '>' {
+				result = append(result, Token{ARROW, "->", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{MINUS, "-", "", lineNo})
+			}
 		case ';':
 			result = append(result, Token{SEMICOLON, ";", "", lineNo})
 		case '!':
@@ -73,6 +103,15 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			}
 			if next == '=' {
 				result = append(result, Token{BANG_EQUAL, "!=", "", lineNo})
+			} else if unicode.IsLetter(rune(next)) && next >= 'a' && next <= 'z' {
+				// This is a builtin function !identifier
+				// Read the rest of the identifier
+				idStr, _, err2 := readIdentifier(reader, next, result)
+				if err2 != nil {
+					return result, err2
+				}
+				// Create a special identifier token with ! prefix
+				result = append(result, Token{IDENTIFIER, "!" + idStr, "", lineNo})
 			} else {
 				reader.UnreadByte()
 				result = append(result, Token{BANG, "!", "", lineNo})
@@ -145,6 +184,32 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 				}
 				result = append(result, Token{SLASH, "/", "", lineNo})
 			}
+		case '|':
+			next, err := reader.ReadByte()
+			if err != nil {
+				if err != io.EOF {
+					return result, err
+				}
+				result = append(result, Token{PIPE, "|", "", lineNo})
+				break
+			}
+			if next == '|' {
+				result = append(result, Token{PIPE_PIPE, "||", "", lineNo})
+			} else {
+				reader.UnreadByte()
+				result = append(result, Token{PIPE, "|", "", lineNo})
+			}
+		case '@':
+			result = append(result, Token{AT, "@", "", lineNo})
+		case ':':
+			result = append(result, Token{COLON, ":", "", lineNo})
+		case '#':
+			// Hash comment - skip to end of line
+			_, err := reader.ReadString('\n')
+			if err != nil && err != io.EOF {
+				return result, err
+			}
+			lineNo++
 		case ' ':
 			// Skip
 		case '\t':
@@ -290,38 +355,26 @@ func readIdentifier(reader *bufio.Reader, b byte, result []Token) (string, []Tok
 
 func getTokenTypeForIdentifier(identifier string) TokenType {
 	switch identifier {
+	case "_":
+		return UNDERSCORE
 	case "and":
 		return AND
-	case "class":
-		return CLASS
 	case "else":
 		return ELSE
-	case "false":
-		return FALSE
-	case "for":
-		return FOR
-	case "fun":
-		return FUN
 	case "if":
 		return IF
 	case "nil":
 		return NIL
 	case "or":
 		return OR
-	case "print":
-		return PRINT
-	case "return":
-		return RETURN
-	case "super":
-		return SUPER
-	case "this":
-		return THIS
-	case "true":
-		return TRUE
-	case "var":
-		return VAR
-	case "while":
-		return WHILE
+	case "match":
+		return MATCH
+	case "perform":
+		return PERFORM
+	case "handle":
+		return HANDLE
+	case "not":
+		return NOT
 	default:
 		return IDENTIFIER
 	}

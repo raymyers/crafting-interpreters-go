@@ -44,6 +44,53 @@ type ErrorValue struct {
 
 func (ErrorValue) implValue() {}
 
+type UnionValue struct {
+	Constructor string
+	Value       Value
+}
+
+func (UnionValue) implValue() {}
+
+type RecordValue struct {
+	Fields map[string]Value
+}
+
+func (RecordValue) implValue() {}
+
+type ListValue struct {
+	Elements []Value
+}
+
+func (ListValue) implValue() {}
+
+type LambdaValue struct {
+	Parameters    []string
+	Body          Expr
+	Closure       *Scope
+	Builtin       func([]Value) Value // For builtin functions
+	PartialArgs   []Value             // For currying - partially applied arguments
+	PartialParams []string            // For currying - remaining parameters
+}
+
+func (LambdaValue) implValue() {}
+
+// ContinuationValue represents a captured continuation for effect handling
+type ContinuationValue struct {
+	Scope *Scope
+	Body  Expr
+}
+
+func (ContinuationValue) implValue() {}
+
+// EffectValue represents an effect that needs to be handled
+type EffectValue struct {
+	Name         string
+	Arguments    []Value
+	Continuation ContinuationValue
+}
+
+func (EffectValue) implValue() {}
+
 // Expr represents an expression in the AST
 type Expr interface {
 	Accept(visitor ExprVisitor) Value
@@ -56,15 +103,28 @@ type ExprVisitor interface {
 	VisitLiteralExpr(expr *Literal) Value
 	VisitUnaryExpr(expr *Unary) Value
 	VisitVariableExpr(expr *Variable) Value
-	VisitPrintStatement(expr *PrintStatement) Value
 	VisitStatements(expr *Statements) Value
 	VisitVarStatement(expr *VarStatement) Value
 	VisitBlock(expr *Block) Value
 	VisitIfStatement(expr *IfStatement) Value
-	VisitWhileStatement(expr *WhileStatement) Value
-	VisitForStatement(expr *ForStatement) Value
 	VisitCallExpr(expr *Call) Value
 	VisitFun(expr *Fun) Value
+	VisitRecord(expr *Record) Value
+	VisitEmptyRecord(expr *EmptyRecord) Value
+	VisitList(expr *List) Value
+	VisitAccess(expr *Access) Value
+	VisitBuiltin(expr *Builtin) Value
+	VisitUnion(expr *Union) Value
+	VisitLambda(expr *Lambda) Value
+	VisitMatch(expr *Match) Value
+	VisitPerform(expr *Perform) Value
+	VisitHandle(expr *Handle) Value
+	VisitNamedRef(expr *NamedRef) Value
+	VisitThunk(expr *Thunk) Value
+	VisitSpread(expr *Spread) Value
+	VisitDestructure(expr *Destructure) Value
+	VisitLet(expr *Let) Value
+	VisitWildcard(expr *Wildcard) Value
 }
 
 // Binary represents a binary expression (e.g., 1 + 2)
@@ -120,16 +180,6 @@ func (v *Variable) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitVariableExpr(v)
 }
 
-// PrintStatement (e.g., (1 + 2))
-type PrintStatement struct {
-	Expression Expr
-	Line       uint
-}
-
-func (g *PrintStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitPrintStatement(g)
-}
-
 // VarStatement (e.g., var a = 1)
 type VarStatement struct {
 	name       string
@@ -172,29 +222,6 @@ func (i *IfStatement) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitIfStatement(i)
 }
 
-// WhileStatement represents a while loop (e.g., while (condition) { body })
-type WhileStatement struct {
-	Condition Expr
-	Body      Expr
-	Line      uint
-}
-
-func (w *WhileStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitWhileStatement(w)
-}
-
-type ForStatement struct {
-	Initializer Expr
-	Condition   Expr
-	Increment   Expr
-	Body        Expr
-	Line        uint
-}
-
-func (w *ForStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitForStatement(w)
-}
-
 // Call represents a function call expression (e.g., foo(1, 2, 3))
 type Call struct {
 	Callee    Expr
@@ -215,4 +242,182 @@ type Fun struct {
 
 func (c *Fun) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitFun(c)
+}
+
+// Record represents a record with fields (e.g., {name: "Alice", age: 30})
+type Record struct {
+	Fields []RecordField
+	Line   uint
+}
+
+type RecordField struct {
+	Name  string
+	Value Expr
+}
+
+func (r *Record) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitRecord(r)
+}
+
+// EmptyRecord represents an empty record {}
+type EmptyRecord struct {
+	Line uint
+}
+
+func (e *EmptyRecord) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitEmptyRecord(e)
+}
+
+// List represents a list [1, 2, 3]
+type List struct {
+	Elements []Expr
+	Line     uint
+}
+
+func (l *List) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitList(l)
+}
+
+// Access represents record field access (e.g., alice.name)
+type Access struct {
+	Object Expr
+	Name   string
+	Line   uint
+}
+
+func (a *Access) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitAccess(a)
+}
+
+// Builtin represents a builtin function (e.g., !int_add)
+type Builtin struct {
+	Name string
+	Line uint
+}
+
+func (b *Builtin) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitBuiltin(b)
+}
+
+// Union represents a union type constructor (e.g., Cat("felix"))
+type Union struct {
+	Constructor string
+	Value       Expr
+	Line        uint
+}
+
+func (u *Union) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitUnion(u)
+}
+
+// Lambda represents a lambda expression (e.g., |x, y| { x + y })
+type Lambda struct {
+	Parameters []string
+	Body       Expr
+	Line       uint
+}
+
+func (l *Lambda) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitLambda(l)
+}
+
+// Match represents a match expression
+type Match struct {
+	Value Expr
+	Cases []MatchCase
+	Line  uint
+}
+
+type MatchCase struct {
+	Pattern Expr
+	Body    Expr
+}
+
+func (m *Match) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitMatch(m)
+}
+
+// Perform represents an effect (e.g., perform Log("hello"))
+type Perform struct {
+	Effect    string
+	Arguments []Expr
+	Line      uint
+}
+
+func (p *Perform) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitPerform(p)
+}
+
+// Handle represents a handle expression
+type Handle struct {
+	Effect   string
+	Handler  Expr
+	Fallback Expr
+	Line     uint
+}
+
+func (h *Handle) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitHandle(h)
+}
+
+// NamedRef represents a named reference (e.g., @std:1)
+type NamedRef struct {
+	Module string
+	Index  int
+	Line   uint
+}
+
+func (n *NamedRef) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitNamedRef(n)
+}
+
+// Thunk represents a thunk (e.g., || {})
+type Thunk struct {
+	Body Expr
+	Line uint
+}
+
+func (t *Thunk) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitThunk(t)
+}
+
+// Spread represents a spread operator (e.g., ..items)
+type Spread struct {
+	Expression Expr
+	Line       uint
+}
+
+func (s *Spread) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitSpread(s)
+}
+
+// Destructure represents destructuring assignment
+type Destructure struct {
+	Fields []RecordField
+	Line   uint
+}
+
+func (d *Destructure) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitDestructure(d)
+}
+
+// Let represents a let binding with a body
+type Let struct {
+	Pattern Expr // Can be Variable, Destructure, or Wildcard
+	Value   Expr
+	Body    Expr
+	Line    uint
+}
+
+func (l *Let) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitLet(l)
+}
+
+// Wildcard represents a wildcard pattern (_) in match expressions
+type Wildcard struct {
+	Line uint
+}
+
+func (w *Wildcard) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitWildcard(w)
 }
