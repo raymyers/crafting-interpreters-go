@@ -511,6 +511,10 @@ func (s *State) getBuiltinArgCount(name string) int {
 		"string_length": 1,
 		"list_pop": 1,
 		"list_fold": 3,
+		"string_to_binary": 1,
+		"string_from_binary": 1,
+		"binary_from_integers": 1,
+		"binary_fold": 3,
 	}
 	
 	if count, exists := argCounts[name]; exists {
@@ -667,6 +671,10 @@ func (s *State) getBuiltin(name string) func(*State, ...Value) {
 		"string_length": func(s *State, args ...Value) { s.builtinStringLength(args...) },
 		"list_pop": func(s *State, args ...Value) { s.builtinListPop(args...) },
 		"list_fold": func(s *State, args ...Value) { s.builtinListFold(args...) },
+		"string_to_binary": func(s *State, args ...Value) { s.builtinStringToBinary(args...) },
+		"string_from_binary": func(s *State, args ...Value) { s.builtinStringFromBinary(args...) },
+		"binary_from_integers": func(s *State, args ...Value) { s.builtinBinaryFromIntegers(args...) },
+		"binary_fold": func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
 	}
 	
 	return builtins[name]
@@ -912,18 +920,72 @@ func (s *State) builtinStringAppend(args ...Value) {
 }
 
 func (s *State) builtinStringSplit(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_split not implemented")
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("string_split expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	str, okA := args[0].(string)
+	sep, okB := args[1].(string)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("string_split expects string arguments")
+		return
+	}
+	
+	parts := strings.Split(str, sep)
+	result := make([]Value, len(parts))
+	for i, part := range parts {
+		result[i] = part
+	}
+	s.SetValue(result)
 }
 
 func (s *State) builtinStringSplitOnce(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_split_once not implemented")
+	if len(args) != 2 {
+		s.Break = fmt.Errorf("string_split_once expects 2 arguments, got %d", len(args))
+		return
+	}
+	
+	str, okA := args[0].(string)
+	sep, okB := args[1].(string)
+	if !okA || !okB {
+		s.Break = fmt.Errorf("string_split_once expects string arguments")
+		return
+	}
+	
+	idx := strings.Index(str, sep)
+	if idx == -1 {
+		// No split occurred
+		result := make([]Value, 1)
+		result[0] = str
+		s.SetValue(result)
+	} else {
+		// Split at first occurrence
+		before := str[:idx]
+		after := str[idx+len(sep):]
+		result := make([]Value, 2)
+		result[0] = before
+		result[1] = after
+		s.SetValue(result)
+	}
 }
 
 func (s *State) builtinStringReplace(args ...Value) {
-	// Stub implementation
-	s.Break = fmt.Errorf("string_replace not implemented")
+	if len(args) != 3 {
+		s.Break = fmt.Errorf("string_replace expects 3 arguments, got %d", len(args))
+		return
+	}
+	
+	str, okA := args[0].(string)
+	old, okB := args[1].(string)
+	new, okC := args[2].(string)
+	if !okA || !okB || !okC {
+		s.Break = fmt.Errorf("string_replace expects string arguments")
+		return
+	}
+	
+	result := strings.ReplaceAll(str, old, new)
+	s.SetValue(result)
 }
 
 func (s *State) builtinStringUppercase(args ...Value) {
@@ -1115,4 +1177,115 @@ func (s *State) valuesEqual(a, b Value) bool {
 	
 	// For other types, use direct comparison
 	return a == b
+}
+
+// Binary-related builtin functions
+func (s *State) builtinStringToBinary(args ...Value) {
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("string_to_binary expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	str, ok := args[0].(string)
+	if !ok {
+		s.Break = fmt.Errorf("string_to_binary expects string argument")
+		return
+	}
+	
+	// Convert string to binary (byte array)
+	bytes := []byte(str)
+	result := make([]Value, len(bytes))
+	for i, b := range bytes {
+		result[i] = float64(b)
+	}
+	s.SetValue(result)
+}
+
+func (s *State) builtinStringFromBinary(args ...Value) {
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("string_from_binary expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	binary, ok := args[0].([]Value)
+	if !ok {
+		s.Break = fmt.Errorf("string_from_binary expects binary argument")
+		return
+	}
+	
+	// Convert binary (byte array) to string
+	bytes := make([]byte, len(binary))
+	for i, v := range binary {
+		if b, ok := v.(float64); ok && b >= 0 && b <= 255 && b == float64(int(b)) {
+			bytes[i] = byte(b)
+		} else {
+			s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+			return
+		}
+	}
+	
+	result := string(bytes)
+	s.SetValue(&Tagged{Tag: "Ok", Value: result})
+}
+
+func (s *State) builtinBinaryFromIntegers(args ...Value) {
+	if len(args) != 1 {
+		s.Break = fmt.Errorf("binary_from_integers expects 1 argument, got %d", len(args))
+		return
+	}
+	
+	list, ok := args[0].([]Value)
+	if !ok {
+		s.Break = fmt.Errorf("binary_from_integers expects list argument")
+		return
+	}
+	
+	// Convert list of integers to binary
+	result := make([]Value, len(list))
+	for i, v := range list {
+		if n, ok := v.(float64); ok && n >= 0 && n <= 255 && n == float64(int(n)) {
+			result[i] = n
+		} else {
+			s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+			return
+		}
+	}
+	
+	s.SetValue(&Tagged{Tag: "Ok", Value: result})
+}
+
+func (s *State) builtinBinaryFold(args ...Value) {
+	if len(args) != 3 {
+		s.Break = fmt.Errorf("binary_fold expects 3 arguments, got %d", len(args))
+		return
+	}
+	
+	binary, ok := args[0].([]Value)
+	if !ok {
+		s.Break = fmt.Errorf("binary_fold expects binary as first argument")
+		return
+	}
+	
+	state := args[1]
+	fn := args[2]
+	
+	if len(binary) == 0 {
+		s.SetValue(state)
+		return
+	}
+	
+	// Recursive implementation: fold(tail, fn(head, state), fn)
+	head := binary[0]
+	tail := binary[1:]
+	
+	// Set up the continuation stack for the recursive call
+	s.Push(CallCont{Arg: fn, Env: s.copyEnv()})
+	s.Push(ApplyCont{Func: &Partial{
+		Exp: Expression{"0": BUILTIN, "l": "binary_fold"},
+		Applied: []Value{tail},
+		Impl: func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
+	}, Env: s.copyEnv()})
+	s.Push(CallCont{Arg: state, Env: s.copyEnv()})
+	s.Push(CallCont{Arg: head, Env: s.copyEnv()})
+	s.SetValue(fn)
 }
