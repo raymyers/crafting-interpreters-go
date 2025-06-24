@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 )
 
 // Expression type constants
@@ -932,11 +934,51 @@ func (s *State) builtinStringSplit(args ...Value) {
 		return
 	}
 	
-	parts := strings.Split(str, sep)
-	result := make([]Value, len(parts))
-	for i, part := range parts {
-		result[i] = part
+	result := make(map[string]Value)
+	
+	if sep == "" {
+		// Special case: splitting on empty string means split into characters
+		if str == "" {
+			result["head"] = ""
+			result["tail"] = []Value{}
+		} else {
+			runes := []rune(str)
+			result["head"] = string(runes[0])
+			tail := make([]Value, len(runes)-1)
+			for i := 1; i < len(runes); i++ {
+				tail[i-1] = string(runes[i])
+			}
+			result["tail"] = tail
+		}
+	} else {
+		// Find the first occurrence of separator
+		index := strings.Index(str, sep)
+		
+		if index == -1 {
+			// Separator not found, entire string is head, empty tail
+			result["head"] = str
+			result["tail"] = []Value{}
+		} else {
+			// Split at first occurrence
+			head := str[:index]
+			remainder := str[index+len(sep):]
+			
+			result["head"] = head
+			
+			// Split the remainder by separator for tail
+			if remainder == "" {
+				result["tail"] = []Value{}
+			} else {
+				tailParts := strings.Split(remainder, sep)
+				tail := make([]Value, len(tailParts))
+				for i, part := range tailParts {
+					tail[i] = part
+				}
+				result["tail"] = tail
+			}
+		}
 	}
+	
 	s.SetValue(result)
 }
 
@@ -955,18 +997,18 @@ func (s *State) builtinStringSplitOnce(args ...Value) {
 	
 	idx := strings.Index(str, sep)
 	if idx == -1 {
-		// No split occurred
-		result := make([]Value, 1)
-		result[0] = str
-		s.SetValue(result)
+		// No split occurred - return Error
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 	} else {
-		// Split at first occurrence
+		// Split at first occurrence - return Ok with record
 		before := str[:idx]
 		after := str[idx+len(sep):]
-		result := make([]Value, 2)
-		result[0] = before
-		result[1] = after
-		s.SetValue(result)
+		
+		record := make(map[string]Value)
+		record["pre"] = before
+		record["post"] = after
+		
+		s.SetValue(&Tagged{Tag: "Ok", Value: record})
 	}
 }
 
@@ -1192,13 +1234,20 @@ func (s *State) builtinStringToBinary(args ...Value) {
 		return
 	}
 	
-	// Convert string to binary (byte array)
+	// Convert string to binary format expected by EYG
 	bytes := []byte(str)
-	result := make([]Value, len(bytes))
-	for i, b := range bytes {
-		result[i] = float64(b)
-	}
-	s.SetValue(result)
+	encoded := base64.StdEncoding.EncodeToString(bytes)
+	// Remove padding as expected by EYG format
+	encoded = strings.TrimRight(encoded, "=")
+	
+	// Create the expected record structure: {"/": {"bytes": "base64data"}}
+	innerRecord := make(map[string]Value)
+	innerRecord["bytes"] = encoded
+	
+	outerRecord := make(map[string]Value)
+	outerRecord["/"] = innerRecord
+	
+	s.SetValue(outerRecord)
 }
 
 func (s *State) builtinStringFromBinary(args ...Value) {
@@ -1207,24 +1256,73 @@ func (s *State) builtinStringFromBinary(args ...Value) {
 		return
 	}
 	
-	binary, ok := args[0].([]Value)
+	// Expect binary format: {"/": {"bytes": "base64data"}}
+	outerRecord, ok := args[0].(map[string]Value)
 	if !ok {
-		s.Break = fmt.Errorf("string_from_binary expects binary argument")
-		return
-	}
-	
-	// Convert binary (byte array) to string
-	bytes := make([]byte, len(binary))
-	for i, v := range binary {
-		if b, ok := v.(float64); ok && b >= 0 && b <= 255 && b == float64(int(b)) {
-			bytes[i] = byte(b)
+		// Try map[string]interface{} for test compatibility
+		if outerInterface, ok2 := args[0].(map[string]interface{}); ok2 {
+			// Convert to map[string]Value
+			outerRecord = make(map[string]Value)
+			for k, v := range outerInterface {
+				outerRecord[k] = v
+			}
 		} else {
 			s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 			return
 		}
 	}
 	
+	innerValue, exists := outerRecord["/"]
+	if !exists {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	innerRecord, ok := innerValue.(map[string]Value)
+	if !ok {
+		// Try map[string]interface{} for test compatibility
+		if innerInterface, ok2 := innerValue.(map[string]interface{}); ok2 {
+			innerRecord = make(map[string]Value)
+			for k, v := range innerInterface {
+				innerRecord[k] = v
+			}
+		} else {
+			s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+			return
+		}
+	}
+	
+	bytesValue, exists := innerRecord["bytes"]
+	if !exists {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	encoded, ok := bytesValue.(string)
+	if !ok {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	// Add padding if needed for base64 decoding
+	for len(encoded)%4 != 0 {
+		encoded += "="
+	}
+	
+	// Decode base64 to bytes
+	bytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
+	// Check if bytes form valid UTF-8
 	result := string(bytes)
+	if !utf8.ValidString(result) {
+		s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
+		return
+	}
+	
 	s.SetValue(&Tagged{Tag: "Ok", Value: result})
 }
 
@@ -1241,17 +1339,27 @@ func (s *State) builtinBinaryFromIntegers(args ...Value) {
 	}
 	
 	// Convert list of integers to binary
-	result := make([]Value, len(list))
+	bytes := make([]byte, len(list))
 	for i, v := range list {
 		if n, ok := v.(float64); ok && n >= 0 && n <= 255 && n == float64(int(n)) {
-			result[i] = n
+			bytes[i] = byte(n)
 		} else {
 			s.SetValue(&Tagged{Tag: "Error", Value: make(map[string]Value)})
 			return
 		}
 	}
 	
-	s.SetValue(&Tagged{Tag: "Ok", Value: result})
+	// Create the expected binary format
+	encoded := base64.StdEncoding.EncodeToString(bytes)
+	// Remove padding as expected by EYG format
+	encoded = strings.TrimRight(encoded, "=")
+	innerRecord := make(map[string]Value)
+	innerRecord["bytes"] = encoded
+	
+	outerRecord := make(map[string]Value)
+	outerRecord["/"] = innerRecord
+	
+	s.SetValue(outerRecord)
 }
 
 func (s *State) builtinBinaryFold(args ...Value) {
@@ -1260,29 +1368,101 @@ func (s *State) builtinBinaryFold(args ...Value) {
 		return
 	}
 	
-	binary, ok := args[0].([]Value)
+	// Extract binary data from the expected format
+	outerRecord, ok := args[0].(map[string]Value)
 	if !ok {
-		s.Break = fmt.Errorf("binary_fold expects binary as first argument")
+		// Try map[string]interface{} for test compatibility
+		if outerInterface, ok2 := args[0].(map[string]interface{}); ok2 {
+			outerRecord = make(map[string]Value)
+			for k, v := range outerInterface {
+				outerRecord[k] = v
+			}
+		} else {
+			s.Break = fmt.Errorf("binary_fold expects binary as first argument")
+			return
+		}
+	}
+	
+	innerValue, exists := outerRecord["/"]
+	if !exists {
+		s.Break = fmt.Errorf("binary_fold: invalid binary format")
+		return
+	}
+	
+	innerRecord, ok := innerValue.(map[string]Value)
+	if !ok {
+		// Try map[string]interface{} for test compatibility
+		if innerInterface, ok2 := innerValue.(map[string]interface{}); ok2 {
+			innerRecord = make(map[string]Value)
+			for k, v := range innerInterface {
+				innerRecord[k] = v
+			}
+		} else {
+			s.Break = fmt.Errorf("binary_fold: invalid binary format")
+			return
+		}
+	}
+	
+	bytesValue, exists := innerRecord["bytes"]
+	if !exists {
+		s.Break = fmt.Errorf("binary_fold: invalid binary format")
+		return
+	}
+	
+	encoded, ok := bytesValue.(string)
+	if !ok {
+		s.Break = fmt.Errorf("binary_fold: invalid binary format")
+		return
+	}
+	
+	// Add padding if needed for base64 decoding
+	for len(encoded)%4 != 0 {
+		encoded += "="
+	}
+	
+	// Decode base64 to bytes
+	bytes, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		s.Break = fmt.Errorf("binary_fold: invalid base64 data")
 		return
 	}
 	
 	state := args[1]
 	fn := args[2]
 	
-	if len(binary) == 0 {
+	if len(bytes) == 0 {
 		s.SetValue(state)
 		return
+	}
+	
+	// Convert bytes to Value array for processing
+	binary := make([]Value, len(bytes))
+	for i, b := range bytes {
+		binary[i] = float64(b)
 	}
 	
 	// Recursive implementation: fold(tail, fn(head, state), fn)
 	head := binary[0]
 	tail := binary[1:]
 	
+	// Create binary format for tail
+	tailBytes := make([]byte, len(tail))
+	for i, v := range tail {
+		tailBytes[i] = byte(v.(float64))
+	}
+	tailEncoded := base64.StdEncoding.EncodeToString(tailBytes)
+	// Remove padding as expected by EYG format
+	tailEncoded = strings.TrimRight(tailEncoded, "=")
+	tailInner := make(map[string]Value)
+	tailInner["bytes"] = tailEncoded
+	tailOuter := make(map[string]Value)
+	tailOuter["/"] = tailInner
+	
 	// Set up the continuation stack for the recursive call
 	s.Push(CallCont{Arg: fn, Env: s.copyEnv()})
 	s.Push(ApplyCont{Func: &Partial{
 		Exp: Expression{"0": BUILTIN, "l": "binary_fold"},
-		Applied: []Value{tail},
+		Applied: []Value{tailOuter},
 		Impl: func(s *State, args ...Value) { s.builtinBinaryFold(args...) },
 	}, Env: s.copyEnv()})
 	s.Push(CallCont{Arg: state, Env: s.copyEnv()})

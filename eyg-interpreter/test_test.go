@@ -105,6 +105,45 @@ func valuesEqual(a, b Value) bool {
 			}
 			return true
 		}
+		// Handle comparison with map[string]interface{}
+		if mapB, okB := b.(map[string]interface{}); okB {
+			if len(mapA) != len(mapB) {
+				return false
+			}
+			for k, v := range mapA {
+				if vB, exists := mapB[k]; !exists || !valuesEqual(v, vB) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	}
+	
+	// Handle maps (interface{} version)
+	if mapA, okA := a.(map[string]interface{}); okA {
+		if mapB, okB := b.(map[string]Value); okB {
+			if len(mapA) != len(mapB) {
+				return false
+			}
+			for k, v := range mapA {
+				if vB, exists := mapB[k]; !exists || !valuesEqual(v, vB) {
+					return false
+				}
+			}
+			return true
+		}
+		if mapB, okB := b.(map[string]interface{}); okB {
+			if len(mapA) != len(mapB) {
+				return false
+			}
+			for k, v := range mapA {
+				if vB, exists := mapB[k]; !exists || !valuesEqual(v, vB) {
+					return false
+				}
+			}
+			return true
+		}
 		return false
 	}
 	
