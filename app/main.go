@@ -7,71 +7,268 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alexflint/go-arg"
 	"github.com/chzyer/readline"
 )
 
+// Args holds the command-line arguments
+type Args struct {
+	// Commands
+	Tokenize *TokenizeCmd `arg:"subcommand:tokenize" help:"Tokenize a file or code string"`
+	Parse    *ParseCmd    `arg:"subcommand:parse" help:"Parse a file or code string to AST"`
+	IR       *IRCmd       `arg:"subcommand:ir" help:"Convert a file or code string to IR JSON"`
+	Evaluate *EvaluateCmd `arg:"subcommand:evaluate" help:"Evaluate a file or code string and print result"`
+	Run      *RunCmd      `arg:"subcommand:run" help:"Run a file or code string without printing result"`
+	Repl     *ReplCmd     `arg:"subcommand:repl" help:"Start interactive REPL"`
+	Suite    *SuiteCmd    `arg:"subcommand:suite" help:"Run test suite with optional filter"`
+}
+
+// TokenizeCmd represents the tokenize command
+type TokenizeCmd struct {
+	File string `arg:"positional" help:"File to tokenize"`
+	Code string `arg:"-c,--code" help:"Code string to tokenize"`
+}
+
+// ParseCmd represents the parse command
+type ParseCmd struct {
+	File string `arg:"positional" help:"File to parse"`
+	Code string `arg:"-c,--code" help:"Code string to parse"`
+}
+
+// IRCmd represents the ir command
+type IRCmd struct {
+	File  string `arg:"positional" help:"File to convert to IR"`
+	Code  string `arg:"-c,--code" help:"Code string to convert to IR"`
+	StdIn bool   `arg:"--in" help:"Read from stdin"`
+}
+
+// EvaluateCmd represents the evaluate command
+type EvaluateCmd struct {
+	File string `arg:"positional" help:"File to evaluate"`
+	Code string `arg:"-c,--code" help:"Code string to evaluate"`
+}
+
+// RunCmd represents the run command
+type RunCmd struct {
+	File string `arg:"positional" help:"File to run"`
+	Code string `arg:"-c,--code" help:"Code string to run"`
+}
+
+// ReplCmd represents the repl command
+type ReplCmd struct{}
+
+// SuiteCmd represents the suite command
+type SuiteCmd struct {
+	Filter string `arg:"positional" help:"Optional filter for test suite"`
+}
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> [filename]")
-		fmt.Fprintln(os.Stderr, "Commands:")
-		fmt.Fprintln(os.Stderr, "  tokenize <filename>  - Tokenize a file")
-		fmt.Fprintln(os.Stderr, "  parse <filename>     - Parse a file to AST")
-		fmt.Fprintln(os.Stderr, "  ir <filename>        - Convert a file to IR JSON")
-		fmt.Fprintln(os.Stderr, "  ir --in              - Convert stdin input to IR JSON")
-		fmt.Fprintln(os.Stderr, "  evaluate <filename>  - Evaluate a file and print result")
-		fmt.Fprintln(os.Stderr, "  run <filename>       - Run a file without printing result")
-		fmt.Fprintln(os.Stderr, "  repl                 - Start interactive REPL")
-		fmt.Fprintln(os.Stderr, "  suite [filter]       - Run test suite with optional filter")
-		os.Exit(1)
-	}
+	var args Args
+	p := arg.MustParse(&args)
 
-	command := os.Args[1]
-
-	// Check if command is repl
-	if command == "repl" {
+	// Check which subcommand was invoked
+	switch {
+	case args.Tokenize != nil:
+		handleTokenizeCmd(args.Tokenize)
+	case args.Parse != nil:
+		handleParseCmd(args.Parse)
+	case args.IR != nil:
+		handleIRCmd(args.IR)
+	case args.Evaluate != nil:
+		handleEvaluateCmd(args.Evaluate, true)
+	case args.Run != nil:
+		handleRunCmd(args.Run)
+	case args.Repl != nil:
 		handleRepl()
-		return
+	case args.Suite != nil:
+		handleSuiteCmd(args.Suite)
+	default:
+		p.WriteHelp(os.Stderr)
+		os.Exit(1)
 	}
+}
 
-	// Special case for "ir" command with "--in" option
-	if command == "ir" && len(os.Args) >= 3 && os.Args[2] == "--in" {
-		handleIR("--in")
-		return
-	}
-
-	// For other commands, require a filename
-	if len(os.Args) < 3 && command != "suite" {
-		fmt.Fprintln(os.Stderr, "Usage: ./your_program.sh <command> <filename>")
-		fmt.Fprintln(os.Stderr, "       ./your_program.sh ir --in  # Read from stdin")
-		fmt.Fprintln(os.Stderr, "       ./your_program.sh suite [filter]  # Run test suite")
+func handleTokenizeCmd(cmd *TokenizeCmd) {
+	// Validate that exactly one input source is provided
+	if (cmd.File == "" && cmd.Code == "") || (cmd.File != "" && cmd.Code != "") {
+		fmt.Fprintln(os.Stderr, "Error: Specify either a file or use -c/--code, but not both")
 		os.Exit(1)
 	}
 
-	filename := os.Args[2]
+	var tokens []Token
+	var tokenizeErr error
 
-	switch command {
-	case "tokenize":
-		handleTokenize(filename)
-	case "parse":
-		handleParse(filename)
-	case "ir":
-		handleIR(filename)
-	case "evaluate":
-		handleEvaluate(filename, true)
-	case "run":
-		handleEvaluate(filename, false)
-	case "suite":
-		// For suite command, the filename is optional and used as a filter
-		filter := ""
-		if len(os.Args) >= 3 {
-			filter = os.Args[2]
-		}
-		if err := RunSuite(filter); err != nil {
-			fmt.Fprintf(os.Stderr, "Error running test suite: %v\n", err)
+	if cmd.Code != "" {
+		tokens, tokenizeErr = TokenizeString(cmd.Code)
+	} else {
+		tokens, tokenizeErr = TokenizeFile(cmd.File)
+	}
+
+	for _, tok := range tokens {
+		_, err := fmt.Fprintf(os.Stdout, "%s\n", tok.String())
+		if err != nil {
 			os.Exit(1)
 		}
+	}
+	if tokenizeErr != nil {
+		os.Exit(65)
+	}
+}
+
+func handleParseCmd(cmd *ParseCmd) {
+	// Validate that exactly one input source is provided
+	if (cmd.File == "" && cmd.Code == "") || (cmd.File != "" && cmd.Code != "") {
+		fmt.Fprintln(os.Stderr, "Error: Specify either a file or use -c/--code, but not both")
+		os.Exit(1)
+	}
+
+	var tokens []Token
+	var tokenizeErr error
+
+	if cmd.Code != "" {
+		tokens, tokenizeErr = TokenizeString(cmd.Code)
+	} else {
+		tokens, tokenizeErr = TokenizeFile(cmd.File)
+	}
+
+	if tokenizeErr != nil {
+		fmt.Fprintf(os.Stderr, "Tokenization error: %v\n", tokenizeErr)
+		os.Exit(65)
+	}
+
+	// Parse the tokens into an AST
+	parser := NewParser(tokens)
+	expr, parseErr := parser.Parse()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Parse error: %v\n", parseErr)
+		os.Exit(65)
+	}
+
+	// Print the AST as S-expression
+	printer := &AstPrinter{}
+	result := printer.Print(expr)
+	fmt.Println(result)
+}
+
+func handleIRCmd(cmd *IRCmd) {
+	// Validate that exactly one input source is provided
+	inputCount := 0
+	if cmd.File != "" {
+		inputCount++
+	}
+	if cmd.Code != "" {
+		inputCount++
+	}
+	if cmd.StdIn {
+		inputCount++
+	}
+
+	if inputCount != 1 {
+		fmt.Fprintln(os.Stderr, "Error: Specify exactly one of: file, -c/--code, or --in")
+		os.Exit(1)
+	}
+
+	var tokens []Token
+	var tokenizeErr error
+
+	if cmd.StdIn {
+		// Read from stdin
+		var input string
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input += scanner.Text() + "\n"
+		}
+		if err := scanner.Err(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading from stdin: %v\n", err)
+			os.Exit(65)
+		}
+		tokens, tokenizeErr = TokenizeString(input)
+	} else if cmd.Code != "" {
+		tokens, tokenizeErr = TokenizeString(cmd.Code)
+	} else {
+		tokens, tokenizeErr = TokenizeFile(cmd.File)
+	}
+
+	if tokenizeErr != nil {
+		fmt.Fprintf(os.Stderr, "Tokenization error: %v\n", tokenizeErr)
+		os.Exit(65)
+	}
+
+	// Parse the tokens into an AST
+	parser := NewParser(tokens)
+	expr, parseErr := parser.Parse()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Parse error: %v\n", parseErr)
+		os.Exit(65)
+	}
+
+	// Convert the AST to IR format
+	converter := NewIRConverter()
+	irJson, err := converter.Convert(expr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "IR conversion error: %v\n", err)
+		os.Exit(65)
+	}
+
+	// Print the IR JSON
+	fmt.Println(string(irJson))
+}
+
+func handleEvaluateCmd(cmd *EvaluateCmd, printResult bool) {
+	// Validate that exactly one input source is provided
+	if (cmd.File == "" && cmd.Code == "") || (cmd.File != "" && cmd.Code != "") {
+		fmt.Fprintln(os.Stderr, "Error: Specify either a file or use -c/--code, but not both")
+		os.Exit(1)
+	}
+
+	var tokens []Token
+	var tokenizeErr error
+
+	if cmd.Code != "" {
+		tokens, tokenizeErr = TokenizeString(cmd.Code)
+	} else {
+		tokens, tokenizeErr = TokenizeFile(cmd.File)
+	}
+
+	if tokenizeErr != nil {
+		fmt.Fprintf(os.Stderr, "Tokenization error: %v\n", tokenizeErr)
+		os.Exit(65)
+	}
+
+	// Parse the tokens into an AST
+	parser := NewParser(tokens)
+	expr, parseErr := parser.Parse()
+	if parseErr != nil {
+		fmt.Fprintf(os.Stderr, "Parse error: %v\n", parseErr)
+		os.Exit(65)
+	}
+
+	// Evaluate the expression
+	evaluator := NewEvaluator(NewDefaultScope(os.Stdout), os.Stdout)
+	result := evaluator.Evaluate(expr)
+	switch result.(type) {
+	case ErrorValue:
+		errorText := fmt.Errorf("[Line %d]\nError: %s", result.(ErrorValue).Line, result.(ErrorValue).Message)
+		fmt.Fprintf(os.Stderr, "%v\n", errorText)
+		os.Exit(70)
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
+		if printResult {
+			fmt.Println(formatValue(result))
+		}
+	}
+}
+
+func handleRunCmd(cmd *RunCmd) {
+	evaluateCmd := &EvaluateCmd{
+		File: cmd.File,
+		Code: cmd.Code,
+	}
+	handleEvaluateCmd(evaluateCmd, false)
+}
+
+func handleSuiteCmd(cmd *SuiteCmd) {
+	if err := RunSuite(cmd.Filter); err != nil {
+		fmt.Fprintf(os.Stderr, "Error running test suite: %v\n", err)
 		os.Exit(1)
 	}
 }
