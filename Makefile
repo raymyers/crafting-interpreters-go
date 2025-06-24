@@ -48,17 +48,17 @@ test:
 # Run EYG interpreter tests
 .PHONY: test-eyg
 test-eyg:
-	cd $(EYG_DIR) && go test -v
+	cd $(EYG_DIR) && go test
 
 # Run tests with coverage
 .PHONY: test-coverage
 test-coverage:
-	go test ./$(APP_DIR) -v -cover
+	go test ./$(APP_DIR) -cover
 
 # Run EYG tests with coverage
 .PHONY: test-eyg-coverage
 test-eyg-coverage:
-	cd $(EYG_DIR) && go test -v -cover
+	cd $(EYG_DIR) && go test -cover
 
 # Clean build artifacts
 .PHONY: clean

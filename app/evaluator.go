@@ -160,7 +160,7 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 		return ErrorValue{"expression is nil", 0}
 	}
 	result := expr.Accept(e)
-	
+
 	// Handle Log effects immediately (built-in effect)
 	if effect, isEffect := result.(EffectValue); isEffect && effect.Name == "Log" {
 		if logHandler, exists := e.scope.lookup("Log"); exists {
@@ -169,7 +169,7 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -723,7 +723,6 @@ func (e *Evaluator) VisitRecord(expr *Record) Value {
 					return spreadValue
 				}
 
-
 				// Spread must be a record
 				if record, ok := spreadValue.(RecordValue); ok {
 					// Add all fields from the spread record
@@ -1045,75 +1044,6 @@ func (e *Evaluator) VisitHandle(expr *Handle) Value {
 		result = e.callLambdaWithValues(lambda, []Value{unitArg}, expr.Line)
 	} else {
 		result = fallbackValue
-	}
-
-	// Check if the result is an effect that matches our handler
-	if effect, isEffect := result.(EffectValue); isEffect {
-		if effect.Name == expr.Effect {
-			// Handle the effect
-			resumeFunc := LambdaValue{
-				Parameters: []string{"value"},
-				Builtin: func(args []Value) Value {
-					if len(args) != 1 {
-						return ErrorValue{Message: "resume expects 1 argument", Line: expr.Line}
-					}
-
-					// Execute the captured continuation
-					var continuationResult Value
-					if effect.Continuation.Body != nil {
-						// Save current scope and switch to continuation scope
-						previousScope := e.scope
-						e.scope = effect.Continuation.Scope
-
-						// Execute the continuation body
-						continuationResult = e.Evaluate(effect.Continuation.Body)
-
-						// Restore previous scope
-						e.scope = previousScope
-					} else {
-						// No continuation body, return unit value
-						continuationResult = RecordValue{Fields: make(map[string]Value)}
-					}
-
-					// If continuation produces another effect, handle it recursively
-					if nextEffect, isEffect := continuationResult.(EffectValue); isEffect {
-						// Re-push the handler and handle the next effect
-						e.effectHandlers = append(e.effectHandlers, effectHandler)
-						handledResult := e.VisitHandle(&Handle{
-							Effect:   nextEffect.Name,
-							Handler:  expr.Handler,
-							Fallback: &Literal{Value: nextEffect},
-							Line:     expr.Line,
-						})
-						e.effectHandlers = e.effectHandlers[:len(e.effectHandlers)-1]
-						
-						// Return the handled result directly
-						return handledResult
-					}
-
-					// For the accumulation pattern, we need to return {return: result, alerts: []}
-					// If the continuation result is already in the expected format, return it
-					if record, isRecord := continuationResult.(RecordValue); isRecord {
-						if _, hasReturn := record.Fields["return"]; hasReturn {
-							if _, hasAlerts := record.Fields["alerts"]; hasAlerts {
-								return continuationResult
-							}
-						}
-					}
-					
-					// Otherwise, wrap the result in the expected structure
-					fields := make(map[string]Value)
-					fields["return"] = continuationResult
-					fields["alerts"] = ListValue{Elements: []Value{}}
-					return RecordValue{Fields: fields}
-				},
-			}
-
-			// Call the handler with (value, resume)
-			handlerArgs := append(effect.Arguments, resumeFunc)
-			result = e.callLambdaWithValues(handler, handlerArgs, expr.Line)
-		}
-		// If effect doesn't match, let it bubble up
 	}
 
 	// Pop the handler from the stack
