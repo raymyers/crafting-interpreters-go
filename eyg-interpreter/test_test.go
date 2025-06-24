@@ -226,12 +226,10 @@ func TestBuiltinsSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/builtins_suite.json", t)
 }
 
-// Commented out for now - we'll enable this as we implement effects
-/*
+// Enable effects tests
 func TestEffectsSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/effects_suite.json", t)
 }
-*/
 
 func main() {
 	// Run a simple test to verify our setup
