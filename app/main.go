@@ -136,12 +136,22 @@ func formatValue(value Value) string {
 		if len(v.Fields) == 0 {
 			return "{}"
 		}
-		// Sort keys for consistent output
+		// Sort keys for consistent output, with "return" first
 		keys := make([]string, 0, len(v.Fields))
 		for key := range v.Fields {
 			keys = append(keys, key)
 		}
-		sort.Strings(keys)
+		sort.Slice(keys, func(i, j int) bool {
+			// "return" comes first
+			if keys[i] == "return" {
+				return true
+			}
+			if keys[j] == "return" {
+				return false
+			}
+			// Otherwise, alphabetical order
+			return keys[i] < keys[j]
+		})
 
 		result := "{"
 		first := true
@@ -169,7 +179,12 @@ func formatValue(value Value) string {
 			if i > 0 {
 				result += ", "
 			}
-			result += formatValue(element)
+			// Quote strings in list context
+			if sv, ok := element.(StringValue); ok {
+				result += fmt.Sprintf("\"%s\"", sv.Val)
+			} else {
+				result += formatValue(element)
+			}
 		}
 		result += "]"
 		return result
