@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"reflect"
@@ -231,10 +230,8 @@ func TestEffectsSpecs(t *testing.T) {
 	runTestSuite("spec/evaluation/effects_suite.json", t)
 }
 
-func main() {
-	// Run a simple test to verify our setup
-	fmt.Println("EYG Interpreter Test Runner")
-	
+// Simple test function for manual verification (moved from main)
+func TestSimpleExpression(t *testing.T) {
 	// Test a simple integer expression
 	expr := Expression{
 		"0": "i",
@@ -242,6 +239,10 @@ func main() {
 	}
 	
 	state := Eval(expr)
-	fmt.Printf("Result: %+v\n", state.Control)
-	fmt.Printf("Break: %+v\n", state.Break)
+	if state.Control == nil {
+		t.Errorf("Expected control value, got nil")
+	}
+	if state.Break != nil {
+		t.Errorf("Expected no break, got %+v", state.Break)
+	}
 }
