@@ -66,10 +66,8 @@ func RunSuite(filter string) error {
 		}
 
 		// Print the code
-		fmt.Printf("CODE:\n")
 		fmt.Printf("----------------------------------------\n")
-		fmt.Printf("%s\n", test.Input)
-		fmt.Printf("----------------------------------------\n")
+		fmt.Printf("CODE: %s\n", test.Input)
 
 		// Parse the code to get the AST
 		tokens, tokenizeErr := TokenizeFile(tempFile)
@@ -86,12 +84,12 @@ func RunSuite(filter string) error {
 		}
 
 		// Print the AST
-		fmt.Printf("AST:\n")
+
 		fmt.Printf("----------------------------------------\n")
 		printer := &AstPrinter{}
 		astResult := printer.Print(expr)
+		fmt.Printf("AST: ")
 		fmt.Println(astResult)
-		fmt.Printf("----------------------------------------\n")
 
 		// Convert to IR
 		converter := NewIRConverter()
@@ -102,35 +100,30 @@ func RunSuite(filter string) error {
 		}
 
 		// Print the IR
-		fmt.Printf("IR:\n")
+
 		fmt.Printf("----------------------------------------\n")
+		fmt.Printf("IR: ")
 		fmt.Println(string(irJson))
-		fmt.Printf("----------------------------------------\n")
 
 		// Print the expected result
-		fmt.Printf("EXPECTED:\n")
 		fmt.Printf("----------------------------------------\n")
-		fmt.Printf("%s\n", test.Expected)
+		fmt.Printf("EXPECTED: %s\n", test.Expected)
 		if test.ExpectedOutput != "" {
 			fmt.Printf("Expected Output: %s\n", test.ExpectedOutput)
 		}
 		fmt.Printf("----------------------------------------\n")
 
 		// Run the interpreter
-		fmt.Printf("INTERPRETER RESULT:\n")
-		fmt.Printf("----------------------------------------\n")
+		fmt.Printf("INTERPRETER RESULT: ")
 
 		// Parse the IR JSON into an Expression
-		var irExpressions []map[string]interface{}
-		err = json.Unmarshal(irJson, &irExpressions)
+		var irNode map[string]interface{}
+		err = json.Unmarshal(irJson, &irNode)
 		if err != nil {
 			fmt.Printf("Error parsing IR JSON: %v\n", err)
-		} else if len(irExpressions) > 0 {
-			// Use the first expression as the entry point
-			expr := irExpressions[0]
-			eyg.Eval(expr)
 		} else {
-			fmt.Printf("No expressions found in IR JSON\n")
+			// Use the first expression as the entry point
+			eyg.RunExample(irNode)
 		}
 		fmt.Printf("----------------------------------------\n")
 

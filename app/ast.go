@@ -103,8 +103,7 @@ type ExprVisitor interface {
 	VisitLiteralExpr(expr *Literal) Value
 	VisitUnaryExpr(expr *Unary) Value
 	VisitVariableExpr(expr *Variable) Value
-	VisitStatements(expr *Statements) Value
-	VisitVarStatement(expr *VarStatement) Value
+	VisitLetStatement(expr *LetStatement) Value
 	VisitBlock(expr *Block) Value
 	VisitIfStatement(expr *IfStatement) Value
 	VisitCallExpr(expr *Call) Value
@@ -123,7 +122,7 @@ type ExprVisitor interface {
 	VisitThunk(expr *Thunk) Value
 	VisitSpread(expr *Spread) Value
 	VisitDestructure(expr *Destructure) Value
-	VisitLet(expr *Let) Value
+	VisitVar(expr *Var) Value
 	VisitWildcard(expr *Wildcard) Value
 }
 
@@ -180,24 +179,16 @@ func (v *Variable) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitVariableExpr(v)
 }
 
-// VarStatement (e.g., var a = 1)
-type VarStatement struct {
+// LetStatement (e.g., var a = 1)
+type LetStatement struct {
 	name       string
 	Expression Expr
+	Body       Expr
 	Line       uint
 }
 
-func (g *VarStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitVarStatement(g)
-}
-
-type Statements struct {
-	Exprs []Expr
-	Line  uint
-}
-
-func (g *Statements) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitStatements(g)
+func (g *LetStatement) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitLetStatement(g)
 }
 
 // Block represents a block statement (e.g., { statements })
@@ -401,16 +392,16 @@ func (d *Destructure) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitDestructure(d)
 }
 
-// Let represents a let binding with a body
-type Let struct {
+// Var represents a let binding with a body
+type Var struct {
 	Pattern Expr // Can be Variable, Destructure, or Wildcard
 	Value   Expr
 	Body    Expr
 	Line    uint
 }
 
-func (l *Let) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitLet(l)
+func (l *Var) Accept(visitor ExprVisitor) Value {
+	return visitor.VisitVar(l)
 }
 
 // Wildcard represents a wildcard pattern (_) in match expressions

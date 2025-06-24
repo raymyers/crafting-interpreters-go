@@ -63,11 +63,7 @@ func (ap *AstPrinter) VisitVariableExpr(expr *Variable) Value {
 	return StringValue{Val: expr.Name.Lexeme}
 }
 
-func (ap *AstPrinter) VisitStatements(expr *Statements) Value {
-	return StringValue{Val: ap.parenthesize("seq", expr.Exprs...)}
-}
-
-func (ap *AstPrinter) VisitVarStatement(expr *VarStatement) Value {
+func (ap *AstPrinter) VisitLetStatement(expr *LetStatement) Value {
 	var strVal string
 	if str, ok := expr.Expression.Accept(ap).(StringValue); ok {
 		strVal = str.Val
@@ -225,7 +221,7 @@ func (ap *AstPrinter) VisitDestructure(expr *Destructure) Value {
 	return StringValue{Val: fmt.Sprintf("(destructure %s)", strings.Join(fields, " "))}
 }
 
-func (ap *AstPrinter) VisitLet(expr *Let) Value {
+func (ap *AstPrinter) VisitVar(expr *Var) Value {
 	// Get pattern string
 	var patternStr string
 	if variable, ok := expr.Pattern.(*Variable); ok {

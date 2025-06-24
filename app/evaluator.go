@@ -380,19 +380,7 @@ func (e *Evaluator) VisitVariableExpr(expr *Variable) Value {
 	return ErrorValue{Message: fmt.Sprintf("Undefined variable '%s'", expr.Name.Lexeme), Line: expr.Line}
 }
 
-func (e *Evaluator) VisitStatements(expr *Statements) Value {
-	var result Value = NilValue{}
-	for _, v := range expr.Exprs {
-		result = e.Evaluate(v)
-		switch result.(type) {
-		case ErrorValue:
-			return result
-		}
-	}
-	return result
-}
-
-func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
+func (e *Evaluator) VisitLetStatement(expr *LetStatement) Value {
 	result := e.Evaluate(expr.Expression)
 	switch result.(type) {
 	case ErrorValue:
@@ -401,7 +389,7 @@ func (e *Evaluator) VisitVarStatement(expr *VarStatement) Value {
 		return result // Propagate effects immediately
 	default:
 		e.scope.define(expr.name, result)
-		return NilValue{}
+		return e.Evaluate(expr.Body)
 	}
 }
 
@@ -1111,7 +1099,7 @@ func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
 	return ErrorValue{Message: "Destructure not implemented", Line: expr.Line}
 }
 
-func (e *Evaluator) VisitLet(expr *Let) Value {
+func (e *Evaluator) VisitVar(expr *Var) Value {
 	// Evaluate the value expression
 	value := e.Evaluate(expr.Value)
 

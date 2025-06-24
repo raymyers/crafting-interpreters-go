@@ -251,14 +251,14 @@ func (p *Parser) statements() (Expr, error) {
 	return p.statement()
 }
 
-// statement handles sequences by building nested Let nodes
+// statement handles sequences by building nested Var nodes
 func (p *Parser) statement() (Expr, error) {
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if this is an assignment that creates a Let node
+	// Check if this is an assignment that creates a Var node
 	if binary, ok := expr.(*Binary); ok && binary.Operator.Type == EQUAL {
 		// Extract pattern (left side of assignment)
 		pattern := binary.Left
@@ -278,10 +278,10 @@ func (p *Parser) statement() (Expr, error) {
 				body = &EmptyRecord{Line: binary.Line}
 			}
 
-			return &Let{Pattern: pattern, Value: binary.Right, Body: body, Line: binary.Line}, nil
+			return &Var{Pattern: pattern, Value: binary.Right, Body: body, Line: binary.Line}, nil
 		} else {
 			// No more statements, use empty record as body
-			return &Let{Pattern: pattern, Value: binary.Right, Body: &EmptyRecord{Line: binary.Line}, Line: binary.Line}, nil
+			return &Var{Pattern: pattern, Value: binary.Right, Body: &EmptyRecord{Line: binary.Line}, Line: binary.Line}, nil
 		}
 	}
 
@@ -300,7 +300,7 @@ func (p *Parser) statement() (Expr, error) {
 		}
 		// Create a wildcard pattern
 		wildcard := &Wildcard{Line: p.tokens[p.current-1].Line}
-		return &Let{Pattern: wildcard, Value: expr, Body: nextStmt, Line: p.tokens[p.current-1].Line}, nil
+		return &Var{Pattern: wildcard, Value: expr, Body: nextStmt, Line: p.tokens[p.current-1].Line}, nil
 	}
 
 	return expr, nil

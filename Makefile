@@ -19,7 +19,7 @@ build-all: build
 .PHONY: build
 build: $(BUILD_DIR)/$(BINARY_NAME)
 
-$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES)
+$(BUILD_DIR)/$(BINARY_NAME): $(GO_FILES) $(EYG_GO_FILES)
 	mkdir -p $(BUILD_DIR)
 	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(APP_DIR)/*.go
 
