@@ -64,12 +64,12 @@ type ListValue struct {
 func (ListValue) implValue() {}
 
 type LambdaValue struct {
-	Parameters      []string
-	Body            Expr
-	Closure         *Scope
-	Builtin         func([]Value) Value // For builtin functions
-	PartialArgs     []Value             // For currying - partially applied arguments
-	PartialParams   []string            // For currying - remaining parameters
+	Parameters    []string
+	Body          Expr
+	Closure       *Scope
+	Builtin       func([]Value) Value // For builtin functions
+	PartialArgs   []Value             // For currying - partially applied arguments
+	PartialParams []string            // For currying - remaining parameters
 }
 
 func (LambdaValue) implValue() {}
@@ -103,7 +103,6 @@ type ExprVisitor interface {
 	VisitLiteralExpr(expr *Literal) Value
 	VisitUnaryExpr(expr *Unary) Value
 	VisitVariableExpr(expr *Variable) Value
-	VisitPrintStatement(expr *PrintStatement) Value
 	VisitStatements(expr *Statements) Value
 	VisitVarStatement(expr *VarStatement) Value
 	VisitBlock(expr *Block) Value
@@ -179,16 +178,6 @@ type Variable struct {
 
 func (v *Variable) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitVariableExpr(v)
-}
-
-// PrintStatement (e.g., (1 + 2))
-type PrintStatement struct {
-	Expression Expr
-	Line       uint
-}
-
-func (g *PrintStatement) Accept(visitor ExprVisitor) Value {
-	return visitor.VisitPrintStatement(g)
 }
 
 // VarStatement (e.g., var a = 1)
@@ -300,11 +289,10 @@ func (a *Access) Accept(visitor ExprVisitor) Value {
 	return visitor.VisitAccess(a)
 }
 
-// Builtin represents a builtin function call (e.g., !int_add(1, 2))
+// Builtin represents a builtin function (e.g., !int_add)
 type Builtin struct {
-	Name      string
-	Arguments []Expr
-	Line      uint
+	Name string
+	Line uint
 }
 
 func (b *Builtin) Accept(visitor ExprVisitor) Value {

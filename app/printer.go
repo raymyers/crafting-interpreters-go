@@ -63,10 +63,6 @@ func (ap *AstPrinter) VisitVariableExpr(expr *Variable) Value {
 	return StringValue{Val: expr.Name.Lexeme}
 }
 
-func (ap *AstPrinter) VisitPrintStatement(expr *PrintStatement) Value {
-	return StringValue{Val: ap.parenthesize("print", expr.Expression)}
-}
-
 func (ap *AstPrinter) VisitStatements(expr *Statements) Value {
 	return StringValue{Val: ap.parenthesize("seq", expr.Exprs...)}
 }
@@ -170,11 +166,7 @@ func (ap *AstPrinter) VisitAccess(expr *Access) Value {
 }
 
 func (ap *AstPrinter) VisitBuiltin(expr *Builtin) Value {
-	var args []string
-	for _, arg := range expr.Arguments {
-		args = append(args, arg.Accept(ap).(StringValue).Val)
-	}
-	return StringValue{Val: fmt.Sprintf("(builtin %s %s)", expr.Name, strings.Join(args, " "))}
+	return StringValue{Val: fmt.Sprintf("(builtin %s)", expr.Name)}
 }
 
 func (ap *AstPrinter) VisitUnion(expr *Union) Value {

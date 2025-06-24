@@ -13,7 +13,7 @@ parser_tests:
 
   - name: "BuiltinCall"
     input: "!int_add(1, 2)"
-    expected: "(builtin int_add 1.0 2.0)"
+    expected: "(call (builtin int_add) 1.0 2.0)"
 
   - name: "ChainedFunctionCalls"
     input: "foo({})(bar)"
@@ -148,7 +148,7 @@ parser_tests:
   - name: "Lambda"
     input: |
       |x, y| { !int_add(x, y) }
-    expected: '(lambda (args x y) (builtin int_add x y))'
+    expected: '(lambda (args x y) (call (builtin int_add) x y))'
   - name: "NamedRef"
     input: |
       @std:1
@@ -162,7 +162,7 @@ parser_tests:
           False(_) -> x
         }
       })
-    expected: '(builtin fix (lambda (args loop x) (match (builtin int_less_than x 3.0) (case (pattern True _) (call loop (builtin int_add x 1.0))) (case (pattern False _) x))))'
+    expected: '(call (builtin fix) (lambda (args loop x) (match (call (builtin int_less_than) x 3.0) (case (pattern True _) (call loop (call (builtin int_add) x 1.0))) (case (pattern False _) x))))'
   
   - name: "Handle"
     input: |

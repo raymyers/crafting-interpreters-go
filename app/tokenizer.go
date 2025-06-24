@@ -103,6 +103,15 @@ func TokenizeReader(reader *bufio.Reader) ([]Token, error) {
 			}
 			if next == '=' {
 				result = append(result, Token{BANG_EQUAL, "!=", "", lineNo})
+			} else if unicode.IsLetter(rune(next)) && next >= 'a' && next <= 'z' {
+				// This is a builtin function !identifier
+				// Read the rest of the identifier
+				idStr, _, err2 := readIdentifier(reader, next, result)
+				if err2 != nil {
+					return result, err2
+				}
+				// Create a special identifier token with ! prefix
+				result = append(result, Token{IDENTIFIER, "!" + idStr, "", lineNo})
 			} else {
 				reader.UnreadByte()
 				result = append(result, Token{BANG, "!", "", lineNo})

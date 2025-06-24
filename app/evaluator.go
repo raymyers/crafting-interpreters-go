@@ -28,9 +28,9 @@ func NewDefaultScope(output io.Writer) *Scope {
 
 	// Define the Log effect
 	logEffect := LambdaValue{
-		Parameters:    []string{"value"},
-		Body:          nil, // Builtin function, no body
-		Closure:       nil,
+		Parameters: []string{"value"},
+		Body:       nil, // Builtin function, no body
+		Closure:    nil,
 		Builtin: func(args []Value) Value {
 			if len(args) != 1 {
 				return ErrorValue{Message: "Log expects exactly 1 argument", Line: 0}
@@ -97,10 +97,10 @@ type EffectHandler struct {
 
 // Evaluator implements the visitor pattern to evaluate expressions
 type Evaluator struct {
-	scope          *Scope
-	output         io.Writer
-	effectHandlers []EffectHandler // Stack of active effect handlers
-	collectedEffects []EffectValue // Effects collected during execution
+	scope            *Scope
+	output           io.Writer
+	effectHandlers   []EffectHandler // Stack of active effect handlers
+	collectedEffects []EffectValue   // Effects collected during execution
 }
 
 // NewEvaluator creates a new evaluator with the given scope and output writer
@@ -160,7 +160,7 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 		return ErrorValue{"expression is nil", 0}
 	}
 	result := expr.Accept(e)
-	
+
 	// Check if the result is an effect that can be handled
 	if effect, isEffect := result.(EffectValue); isEffect {
 		// First check for Log effect (built-in handler) - handle immediately
@@ -171,13 +171,13 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 				}
 			}
 		}
-		
+
 		// Only handle other effects that have a proper continuation
 		// Effects without continuation should bubble up to be captured first
 		if effect.Continuation.Body == nil {
 			return effect
 		}
-		
+
 		// Check the effect handler stack for matching handlers
 		for i := len(e.effectHandlers) - 1; i >= 0; i-- {
 			handler := e.effectHandlers[i]
@@ -189,37 +189,37 @@ func (e *Evaluator) Evaluate(expr Expr) Value {
 						if len(args) != 1 {
 							return ErrorValue{Message: "resume expects 1 argument", Line: handler.Line}
 						}
-						
-							// Execute the captured continuation
-							// resumeValue := args[0] // TODO: Use this value in continuation
-							
-							// Save current scope and switch to continuation scope
-							previousScope := e.scope
-							e.scope = effect.Continuation.Scope
-							
-							// Execute the continuation body
-							result := e.Evaluate(effect.Continuation.Body)
-							
-							// Restore previous scope
-							e.scope = previousScope
-							
-							// Debug: Check if continuation produces another effect
-							if _, isEffect := result.(EffectValue); isEffect {
-								// If continuation produces another effect, propagate it
-								return result
-							}
-							
+
+						// Execute the captured continuation
+						// resumeValue := args[0] // TODO: Use this value in continuation
+
+						// Save current scope and switch to continuation scope
+						previousScope := e.scope
+						e.scope = effect.Continuation.Scope
+
+						// Execute the continuation body
+						result := e.Evaluate(effect.Continuation.Body)
+
+						// Restore previous scope
+						e.scope = previousScope
+
+						// Debug: Check if continuation produces another effect
+						if _, isEffect := result.(EffectValue); isEffect {
+							// If continuation produces another effect, propagate it
 							return result
+						}
+
+						return result
 					},
 				}
-				
+
 				// Call the handler with (value, resume)
 				handlerArgs := append(effect.Arguments, resumeFunc)
 				return e.callLambdaWithValues(handler.Handler, handlerArgs, handler.Line)
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -417,20 +417,6 @@ func (e *Evaluator) VisitVariableExpr(expr *Variable) Value {
 	return ErrorValue{Message: fmt.Sprintf("Undefined variable '%s'", expr.Name.Lexeme), Line: expr.Line}
 }
 
-func (e *Evaluator) VisitPrintStatement(expr *PrintStatement) Value {
-	result := e.Evaluate(expr.Expression)
-	switch result.(type) {
-	case ErrorValue:
-		return result
-	default:
-		_, err := fmt.Fprintf(e.output, "%s\n", formatValue(result))
-		if err != nil {
-			return ErrorValue{Message: "Print failed"}
-		}
-		return NilValue{}
-	}
-}
-
 func (e *Evaluator) VisitStatements(expr *Statements) Value {
 	var result Value = NilValue{}
 	for _, v := range expr.Exprs {
@@ -513,17 +499,7 @@ func (e *Evaluator) VisitIfStatement(expr *IfStatement) Value {
 }
 
 func (e *Evaluator) VisitCallExpr(expr *Call) Value {
-	// Check if it's a variable reference to "clock"
-	if varExpr, ok := expr.Callee.(*Variable); ok && varExpr.Name.Lexeme == "clock" {
-		// Check that clock() is called with no arguments
-		if len(expr.Arguments) != 0 {
-			return ErrorValue{Message: "clock() takes no arguments", Line: expr.Line}
-		}
-
-		// Return current time in epoch seconds
-		epochSeconds := float64(time.Now().Unix())
-		return NumberValue{Val: epochSeconds}
-	} else if varExpr, ok := expr.Callee.(*Variable); ok {
+	if varExpr, ok := expr.Callee.(*Variable); ok {
 		lookup, ok := e.scope.lookup(varExpr.Name.Lexeme)
 		if !ok {
 			return ErrorValue{Message: "undefined function", Line: expr.Line}
@@ -624,51 +600,51 @@ func (e *Evaluator) VisitCallExpr(expr *Call) Value {
 func (e *Evaluator) callLambdaWithValues(lv LambdaValue, argValues []Value, line uint) Value {
 	// Get partial arguments
 	partialArgs := lv.PartialArgs
-	
+
 	// Combine partial arguments with new arguments
 	allArgs := append(partialArgs, argValues...)
-	
+
 	// Check if we have enough arguments to call the function
 	if len(allArgs) < len(lv.Parameters) {
 		// Not enough arguments - return a partially applied function
 		remainingParams := lv.Parameters[len(allArgs):]
 		return LambdaValue{
-			Parameters:    lv.Parameters,    // Keep original parameters
+			Parameters:    lv.Parameters, // Keep original parameters
 			Body:          lv.Body,
 			Closure:       lv.Closure,
 			Builtin:       lv.Builtin,
-			PartialArgs:   allArgs,          // Store all arguments so far
-			PartialParams: remainingParams,  // Store remaining parameters
+			PartialArgs:   allArgs,         // Store all arguments so far
+			PartialParams: remainingParams, // Store remaining parameters
 		}
 	}
-	
+
 	// We have enough arguments - call the function
 	if lv.Builtin != nil {
 		return lv.Builtin(allArgs)
 	}
-	
+
 	// Create new scope for function execution
 	previousScope := e.scope
 	e.scope = NewScope(lv.Closure)
-	
+
 	// Bind parameters to arguments
 	for i, paramName := range lv.Parameters {
 		e.scope.define(paramName, allArgs[i])
 	}
-	
+
 	// Execute function body
 	result := e.Evaluate(lv.Body)
-	
+
 	// Restore previous scope
 	e.scope = previousScope
-	
+
 	return result
 }
 
 func (e *Evaluator) callLambda(lv LambdaValue, arguments []Expr, line uint) Value {
 	// Get partial arguments
 	partialArgs := lv.PartialArgs
-	
+
 	// Evaluate the new arguments
 	newArgValues := make([]Value, len(arguments))
 	for i, arg := range arguments {
@@ -678,24 +654,24 @@ func (e *Evaluator) callLambda(lv LambdaValue, arguments []Expr, line uint) Valu
 		}
 		newArgValues[i] = argValue
 	}
-	
+
 	// Combine partial arguments with new arguments
 	allArgs := append(partialArgs, newArgValues...)
-	
+
 	// Check if we have enough arguments to call the function
 	if len(allArgs) < len(lv.Parameters) {
 		// Not enough arguments - return a partially applied function
 		remainingParams := lv.Parameters[len(allArgs):]
 		return LambdaValue{
-			Parameters:    lv.Parameters,    // Keep original parameters
+			Parameters:    lv.Parameters, // Keep original parameters
 			Body:          lv.Body,
 			Closure:       lv.Closure,
 			Builtin:       lv.Builtin,
-			PartialArgs:   allArgs,          // Store all arguments so far
-			PartialParams: remainingParams,  // Store remaining parameters
+			PartialArgs:   allArgs,         // Store all arguments so far
+			PartialParams: remainingParams, // Store remaining parameters
 		}
 	}
-	
+
 	// We have enough arguments - check for exact match or too many
 	if len(allArgs) > len(lv.Parameters) {
 		return ErrorValue{
@@ -703,24 +679,24 @@ func (e *Evaluator) callLambda(lv LambdaValue, arguments []Expr, line uint) Valu
 			Line:    line,
 		}
 	}
-	
+
 	// Check if this is a builtin function
 	if lv.Builtin != nil {
 		return lv.Builtin(allArgs)
 	}
-	
+
 	// Create new scope for lambda execution (based on closure)
 	previousScope := e.scope
 	e.scope = NewScope(lv.Closure)
-	
+
 	// Bind parameters to arguments in the new scope
 	for i, paramName := range lv.Parameters {
 		e.scope.define(paramName, allArgs[i])
 	}
-	
+
 	// Execute lambda body
 	result := e.Evaluate(lv.Body)
-	
+
 	// Restore previous scope
 	e.scope = previousScope
 	return result
@@ -860,104 +836,83 @@ func (e *Evaluator) VisitAccess(expr *Access) Value {
 func (e *Evaluator) VisitBuiltin(expr *Builtin) Value {
 	switch expr.Name {
 	case "list_fold":
-		if len(expr.Arguments) != 3 {
-			return ErrorValue{Message: "list_fold expects 3 arguments", Line: expr.Line}
+		// list_fold takes 3 arguments: list, initial value, fold function
+		return LambdaValue{
+			Parameters: []string{"list", "init", "fn"},
+			Builtin: func(args []Value) Value {
+				if len(args) != 3 {
+					return ErrorValue{Message: "list_fold expects 3 arguments", Line: expr.Line}
+				}
+
+				list, ok := args[0].(ListValue)
+				if !ok {
+					return ErrorValue{Message: "First argument to list_fold must be a list", Line: expr.Line}
+				}
+
+				accumulator := args[1]
+
+				lambda, ok := args[2].(LambdaValue)
+				if !ok {
+					return ErrorValue{Message: "Third argument to list_fold must be a function", Line: expr.Line}
+				}
+
+				// Fold over the list
+				for _, element := range list.Elements {
+					// Call lambda with accumulator and element
+					result := e.callLambdaWithValues(lambda, []Value{accumulator, element}, expr.Line)
+					if _, ev := result.(ErrorValue); ev {
+						return result
+					}
+					accumulator = result
+				}
+
+				return accumulator
+			},
 		}
-
-		// Evaluate list
-		listValue := e.Evaluate(expr.Arguments[0])
-		if _, ev := listValue.(ErrorValue); ev {
-			return listValue
-		}
-		list, ok := listValue.(ListValue)
-		if !ok {
-			return ErrorValue{Message: "First argument to list_fold must be a list", Line: expr.Line}
-		}
-
-		// Evaluate initial value
-		accumulator := e.Evaluate(expr.Arguments[1])
-		if _, ev := accumulator.(ErrorValue); ev {
-			return accumulator
-		}
-
-		// Evaluate function
-		funcValue := e.Evaluate(expr.Arguments[2])
-		if _, ev := funcValue.(ErrorValue); ev {
-			return funcValue
-		}
-		lambda, ok := funcValue.(LambdaValue)
-		if !ok {
-			return ErrorValue{Message: "Third argument to list_fold must be a function", Line: expr.Line}
-		}
-
-		// Fold over the list
-		for _, element := range list.Elements {
-			// Call lambda with accumulator and element
-			previousScope := e.scope
-			e.scope = NewScope(lambda.Closure)
-
-			// Bind parameters
-			if len(lambda.Parameters) != 2 {
-				e.scope = previousScope
-				return ErrorValue{Message: "Fold function must take exactly 2 parameters", Line: expr.Line}
-			}
-			e.scope.define(lambda.Parameters[0], accumulator)
-			e.scope.define(lambda.Parameters[1], element)
-
-			// Execute lambda body
-			result := e.Evaluate(lambda.Body)
-			e.scope = previousScope
-
-			if _, ev := result.(ErrorValue); ev {
-				return result
-			}
-			accumulator = result
-		}
-
-		return accumulator
 
 	case "int_parse":
-		if len(expr.Arguments) != 1 {
-			return ErrorValue{Message: "int_parse expects 1 argument", Line: expr.Line}
-		}
+		// int_parse takes 1 argument: string
+		return LambdaValue{
+			Parameters: []string{"str"},
+			Builtin: func(args []Value) Value {
+				if len(args) != 1 {
+					return ErrorValue{Message: "int_parse expects 1 argument", Line: expr.Line}
+				}
 
-		// Evaluate string argument
-		strValue := e.Evaluate(expr.Arguments[0])
-		if _, ev := strValue.(ErrorValue); ev {
-			return strValue
-		}
-		str, ok := strValue.(StringValue)
-		if !ok {
-			return ErrorValue{Message: "int_parse expects a string argument", Line: expr.Line}
-		}
+				str, ok := args[0].(StringValue)
+				if !ok {
+					return ErrorValue{Message: "int_parse expects a string argument", Line: expr.Line}
+				}
 
-		// Parse the string to integer
-		if val, err := strconv.ParseFloat(str.Val, 64); err == nil {
-			// Return Ok(value) union type
-			return UnionValue{Constructor: "Ok", Value: NumberValue{Val: val}}
-		} else {
-			// Return Error(message) union type
-			return UnionValue{Constructor: "Error", Value: StringValue{Val: err.Error()}}
+				// Parse the string to integer
+				if val, err := strconv.ParseFloat(str.Val, 64); err == nil {
+					// Return Ok(value) union type
+					return UnionValue{Constructor: "Ok", Value: NumberValue{Val: val}}
+				} else {
+					// Return Error(message) union type
+					return UnionValue{Constructor: "Error", Value: StringValue{Val: err.Error()}}
+				}
+			},
 		}
 
 	case "clock":
-		if len(expr.Arguments) != 1 {
-			return ErrorValue{Message: "clock expects 1 argument (empty record)", Line: expr.Line}
-		}
+		// clock takes 1 argument: empty record
+		return LambdaValue{
+			Parameters: []string{"_"},
+			Builtin: func(args []Value) Value {
+				if len(args) != 1 {
+					return ErrorValue{Message: "clock expects 1 argument", Line: expr.Line}
+				}
 
-		// Evaluate the argument (should be an empty record)
-		argValue := e.Evaluate(expr.Arguments[0])
-		if _, ev := argValue.(ErrorValue); ev {
-			return argValue
-		}
+				// Check if it's an empty record
+				if _, ok := args[0].(RecordValue); ok {
+					epochSeconds := float64(time.Now().Unix())
+					return NumberValue{Val: epochSeconds}
+				}
 
-		// Check if it's an empty record (NilValue)
-		if _, ok := argValue.(NilValue); !ok {
-			return ErrorValue{Message: "clock expects an empty record argument", Line: expr.Line}
+				return ErrorValue{Message: "clock expects an empty record argument", Line: expr.Line}
+			},
 		}
-
-		epochSeconds := float64(time.Now().Unix())
-		return NumberValue{Val: epochSeconds}
 
 	default:
 		return ErrorValue{Message: fmt.Sprintf("Unknown builtin function: %s", expr.Name), Line: expr.Line}
@@ -999,13 +954,13 @@ func (e *Evaluator) VisitMatch(expr *Match) Value {
 			for name, val := range bindings {
 				e.scope.define(name, val)
 			}
-			
+
 			// Evaluate the body
 			result := e.Evaluate(matchCase.Body)
-			
+
 			// Restore previous scope
 			e.scope = e.scope.parent
-			
+
 			return result
 		}
 	}
@@ -1036,7 +991,7 @@ func (e *Evaluator) matchPattern(pattern Expr, value Value) (map[string]Value, b
 				// Extract parameters from the pattern
 				if varPattern, ok := p.Value.(*Variable); ok {
 					paramNames := strings.Split(varPattern.Name.Lexeme, ",")
-					
+
 					// Handle empty parameter list
 					if len(paramNames) == 1 && paramNames[0] == "" {
 						return bindings, true
@@ -1137,9 +1092,9 @@ func (e *Evaluator) VisitNamedRef(expr *NamedRef) Value {
 		// Create a std library with list.contains function
 		// Use LambdaValue to represent the builtin function
 		containsFunc := LambdaValue{
-			Parameters:    []string{"list", "item"},
-			Body:          nil, // Special marker for builtin
-			Closure:       nil,
+			Parameters: []string{"list", "item"},
+			Body:       nil, // Special marker for builtin
+			Closure:    nil,
 			Builtin: func(args []Value) Value {
 				if len(args) != 2 {
 					return ErrorValue{Message: "contains expects 2 arguments", Line: expr.Line}
@@ -1193,7 +1148,7 @@ func (e *Evaluator) VisitDestructure(expr *Destructure) Value {
 func (e *Evaluator) VisitSeq(expr *Seq) Value {
 	// Evaluate left expression first
 	leftResult := e.Evaluate(expr.Left)
-	
+
 	// If left produces an error or effect, propagate it immediately
 	if _, isError := leftResult.(ErrorValue); isError {
 		return leftResult
@@ -1201,10 +1156,10 @@ func (e *Evaluator) VisitSeq(expr *Seq) Value {
 	if _, isEffect := leftResult.(EffectValue); isEffect {
 		return leftResult
 	}
-	
+
 	// Then evaluate right expression
 	rightResult := e.Evaluate(expr.Right)
-	
+
 	// Return the result of the right expression (sequence returns last value)
 	return rightResult
 }

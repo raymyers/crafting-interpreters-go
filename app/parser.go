@@ -153,57 +153,11 @@ func (p *Parser) unary() (Expr, error) {
 	}
 	if p.match(BANG) {
 		operator := p.previous()
-		// Check if this is a builtin call (!identifier(...))
-		if p.check(IDENTIFIER) {
-			name := p.advance().Lexeme
-			if p.match(LPAR) {
-				// Check if this looks like a builtin (lowercase identifier)
-				if len(name) > 0 && name[0] >= 'a' && name[0] <= 'z' {
-					// This is a builtin call
-					var arguments []Expr
-					if !p.check(RPAR) {
-						for {
-							arg, err := p.expression()
-							if err != nil {
-								return nil, err
-							}
-							arguments = append(arguments, arg)
-							if !p.match(COMMA) {
-								break
-							}
-						}
-					}
-					_, err := p.consume(RPAR, "Expect ')' after builtin arguments.")
-					if err != nil {
-						return nil, err
-					}
-					return &Builtin{Name: name, Arguments: arguments, Line: operator.Line}, nil
-				} else {
-					// Not a builtin call (uppercase identifier), treat as unary ! followed by call
-					p.current-- // back up to re-parse the (
-					p.current-- // back up to re-parse the identifier
-					right, err := p.unary()
-					if err != nil {
-						return nil, err
-					}
-					return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
-				}
-			} else {
-				// Not a builtin call, treat as unary ! followed by identifier
-				p.current-- // back up to re-parse the identifier
-				right, err := p.unary()
-				if err != nil {
-					return nil, err
-				}
-				return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
-			}
-		} else {
-			right, err := p.unary()
-			if err != nil {
-				return nil, err
-			}
-			return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
+		right, err := p.unary()
+		if err != nil {
+			return nil, err
 		}
+		return &Unary{Operator: operator, Right: right, Line: operator.Line}, nil
 	}
 
 	if p.match(MINUS) {
@@ -300,14 +254,27 @@ func (p *Parser) statements() (Expr, error) {
 		return nil, err
 	}
 	line := p.previous().Line
+	lastLine := p.previous().Line
 	results = append(results, expr)
 	for {
-		_ = p.match(SEMICOLON)
-		expr, err := p.expression()
+		// Check if we have a semicolon
+		hadSemicolon := p.match(SEMICOLON)
 
+		// Check if next token is on a new line
+		currentLine := p.peek().Line
+		onNewLine := currentLine > lastLine
+
+		// Only continue if we have a semicolon or we're on a new line
+		if !hadSemicolon && !onNewLine {
+			break
+		}
+
+		// Try to parse another expression
+		expr, err := p.expression()
 		if err != nil {
 			break
 		}
+		lastLine = p.previous().Line
 		results = append(results, expr)
 	}
 
@@ -362,6 +329,14 @@ func (p *Parser) primary() (Expr, error) {
 
 	if p.match(IDENTIFIER) {
 		token := p.previous()
+		// Check if this is a builtin identifier (starts with !)
+		if strings.HasPrefix(token.Lexeme, "!") && len(token.Lexeme) > 1 {
+			builtinName := token.Lexeme[1:]
+			// Check if lowercase (builtin function)
+			if builtinName[0] >= 'a' && builtinName[0] <= 'z' {
+				return &Builtin{Name: builtinName, Line: token.Line}, nil
+			}
+		}
 		return &Variable{Name: token, Line: token.Line}, nil
 	}
 
@@ -827,7 +802,7 @@ func (p *Parser) parsePattern() (Expr, error) {
 	// Handle constructor patterns: Constructor(params)
 	if p.check(IDENTIFIER) {
 		constructor := p.advance()
-		
+
 		// Check if this is followed by parentheses (constructor pattern)
 		if p.match(LPAR) {
 			var params []string
@@ -857,9 +832,9 @@ func (p *Parser) parsePattern() (Expr, error) {
 			// For now, we'll represent this as a Union with a special marker
 			// The evaluator will need to handle pattern matching logic
 			return &Union{
-				Constructor: constructor.Lexeme, 
-				Value: &Variable{Name: Token{Lexeme: strings.Join(params, ","), Type: IDENTIFIER}, Line: constructor.Line}, 
-				Line: constructor.Line,
+				Constructor: constructor.Lexeme,
+				Value:       &Variable{Name: Token{Lexeme: strings.Join(params, ","), Type: IDENTIFIER}, Line: constructor.Line},
+				Line:        constructor.Line,
 			}, nil
 		} else {
 			// Simple variable pattern

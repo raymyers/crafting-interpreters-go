@@ -204,7 +204,7 @@ evaluator_tests:
     input: |
       False({}) and 56
     expected: "False({})"
-  - name: "Clock"
+  - name: "Clock builtin"
     input: |
       !clock({}) > 0
     expected: "True({})"
